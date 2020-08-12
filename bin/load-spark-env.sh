@@ -23,6 +23,7 @@
 
 # Figure out where Spark is installed
 if [ -z "${SPARK_HOME}" ]; then
+  # SSY already called in spark-class
   source "$(dirname "$0")"/find-spark-home
 fi
 
