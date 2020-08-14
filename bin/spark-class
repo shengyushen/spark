@@ -21,7 +21,7 @@ if [ -z "${SPARK_HOME}" ]; then
   # SSY find home variable SPARK_HOME  and set it in env
   source "$(dirname "$0")"/find-spark-home
 fi
-
+# SSY loading your config in conf/spark-defaults.conf.template
 . "${SPARK_HOME}"/bin/load-spark-env.sh
 
 # Find the java binary
@@ -42,7 +42,7 @@ if [ -d "${SPARK_HOME}/jars" ]; then
 else
   SPARK_JARS_DIR="${SPARK_HOME}/assembly/target/scala-$SPARK_SCALA_VERSION/jars"
 fi
-
+# SSY all jar searching path in LAUNCH_CLASSPATH
 if [ ! -d "$SPARK_JARS_DIR" ] && [ -z "$SPARK_TESTING$SPARK_SQL_TESTING" ]; then
   echo "Failed to find Spark jars directory ($SPARK_JARS_DIR)." 1>&2
   echo "You need to build Spark with the target \"package\" before running this program." 1>&2
@@ -68,7 +68,9 @@ fi
 #
 # The exit code of the launcher is appended to the output, so the parent shell removes it from the
 # command array and checks the value to see if the launcher succeeded.
+# SSYSSYSSY build command with java as caller ./launcher/src/main/java/org/apache/spark/launcher/Main.java
 build_command() {
+  # SSY calling launcher/src/main/java/org/apache/spark/launcher/Main.java
   "$RUNNER" -Xmx128m $SPARK_LAUNCHER_OPTS -cp "$LAUNCH_CLASSPATH" org.apache.spark.launcher.Main "$@"
   printf "%d\0" $?
 }

@@ -72,6 +72,7 @@ private[deploy] object SparkSubmitAction extends Enumeration {
  * This program handles setting up the classpath with relevant Spark dependencies and provides
  * a layer over the different cluster managers and deploy modes that Spark supports.
  */
+// SSY SparkSubmit 
 private[spark] class SparkSubmit extends Logging {
 
   import DependencyUtils._
@@ -87,6 +88,7 @@ private[spark] class SparkSubmit extends Logging {
       logInfo(appArgs.toString)
     }
     appArgs.action match {
+      // SSY submit a job
       case SparkSubmitAction.SUBMIT => submit(appArgs, uninitLog)
       case SparkSubmitAction.KILL => kill(appArgs)
       case SparkSubmitAction.REQUEST_STATUS => requestStatus(appArgs)
@@ -152,9 +154,10 @@ private[spark] class SparkSubmit extends Logging {
    * Submit the application using the provided parameters, ensuring to first wrap
    * in a doAs when --proxy-user is specified.
    */
+  // SSY submit a new job
   @tailrec
   private def submit(args: SparkSubmitArguments, uninitLog: Boolean): Unit = {
-
+    //SSY calling runMain
     def doRunMain(): Unit = {
       if (args.proxyUser != null) {
         val proxyUser = UserGroupInformation.createProxyUser(args.proxyUser,

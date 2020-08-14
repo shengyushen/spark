@@ -42,6 +42,7 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
    * NOTE: this cannot be "pyspark-shell" since that identifies the PySpark shell to SparkSubmit
    * (see java_gateway.py), and can cause this code to enter into an infinite loop.
    */
+  // SSY this string is not used explictly, but only be refered by PYSPARK_SHELL
   static final String PYSPARK_SHELL = "pyspark-shell-main";
 
   /**
@@ -125,6 +126,7 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
 
     if (args.size() > 0) {
       switch (args.get(0)) {
+        // SSY calling spark-submit PYSPARK_SHELL  and so on
         case PYSPARK_SHELL:
           this.allowsMixedArguments = true;
           appResource = PYSPARK_SHELL;

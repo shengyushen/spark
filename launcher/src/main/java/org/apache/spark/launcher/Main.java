@@ -57,8 +57,10 @@ class Main {
     boolean printLaunchCommand = !isEmpty(System.getenv("SPARK_PRINT_LAUNCH_COMMAND"));
     Map<String, String> env = new HashMap<>();
     List<String> cmd;
+    // SSY SparkSubmit is used to submit a command
     if (className.equals("org.apache.spark.deploy.SparkSubmit")) {
       try {
+        // SSY use submit to build 
         AbstractCommandBuilder builder = new SparkSubmitCommandBuilder(args);
         cmd = buildCommand(builder, env, printLaunchCommand);
       } catch (IllegalArgumentException e) {
@@ -79,6 +81,7 @@ class Main {
           help.add(parser.className);
         }
         help.add(parser.USAGE_ERROR);
+        // SSY build command again even when error
         AbstractCommandBuilder builder = new SparkSubmitCommandBuilder(help);
         cmd = buildCommand(builder, env, printLaunchCommand);
       }
@@ -106,10 +109,14 @@ class Main {
    * Prepare spark commands with the appropriate command builder.
    * If printLaunchCommand is set then the commands will be printed to the stderr.
    */
+  // SSY real build command
   private static List<String> buildCommand(
       AbstractCommandBuilder builder,
       Map<String, String> env,
       boolean printLaunchCommand) throws IOException, IllegalArgumentException {
+    // in SparkSubmitCommandBuilder or SparkClassCommandBuilder
+    // SSY SparkSubmitCommandBuilder do python and R submit 
+    // while SparkClassCommandBuilder handle mesos , history server and so on
     List<String> cmd = builder.buildCommand(env);
     if (printLaunchCommand) {
       System.err.println("Spark Command: " + join(" ", cmd));

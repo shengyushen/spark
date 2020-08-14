@@ -1,3 +1,7 @@
+invoking script 
+1 bin/spark-submit, calling spark-class to call ./launcher/src/main/java/org/apache/spark/launcher/Main.java  with ./core/src/main/scala/org/apache/spark/deploy/SparkSubmit.scala as argument
+2 bin/spark-class ./launcher/src/main/java/org/apache/spark/launcher/Main.java
+
 # Apache Spark
 
 Spark is a unified analytics engine for large-scale data processing. It provides

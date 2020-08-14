@@ -30,9 +30,9 @@ fi
 SPARK_ENV_SH="spark-env.sh"
 if [ -z "$SPARK_ENV_LOADED" ]; then
   export SPARK_ENV_LOADED=1
-
+  # SSY conf/
   export SPARK_CONF_DIR="${SPARK_CONF_DIR:-"${SPARK_HOME}"/conf}"
-
+  # SSY conf/spark-defaults.conf.template
   SPARK_ENV_SH="${SPARK_CONF_DIR}/${SPARK_ENV_SH}"
   if [[ -f "${SPARK_ENV_SH}" ]]; then
     # Promote all variable declarations to environment (exported) variables
