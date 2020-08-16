@@ -111,4 +111,5 @@ if [ $LAUNCHER_EXIT_CODE != 0 ]; then
 fi
 
 CMD=("${CMD[@]:0:$LAST}")
+# SSY real execution of the CMD
 exec "${CMD[@]}"

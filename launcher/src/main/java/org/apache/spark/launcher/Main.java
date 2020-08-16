@@ -89,7 +89,7 @@ class Main {
       AbstractCommandBuilder builder = new SparkClassCommandBuilder(className, args);
       cmd = buildCommand(builder, env, printLaunchCommand);
     }
-
+    // SSY cmd is already a list of cmd, I need to transform it into windows or bash format
     if (isWindows()) {
       System.out.println(prepareWindowsCommand(cmd, env));
     } else {

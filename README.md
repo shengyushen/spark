@@ -1,6 +1,12 @@
 invoking script 
-1 bin/spark-submit, calling spark-class to call ./launcher/src/main/java/org/apache/spark/launcher/Main.java  with ./core/src/main/scala/org/apache/spark/deploy/SparkSubmit.scala as argument
-2 bin/spark-class ./launcher/src/main/java/org/apache/spark/launcher/Main.java
+../HiBench/bin/workloads/micro/wordcount/spark/run.sh
+1 bin/spark-submit
+	1.1 bin/spark-class
+		1.1.1 ./launcher/src/main/java/org/apache/spark/launcher/Main.java to build cmd
+		1.1.2 ./core/src/main/scala/org/apache/spark/deploy/SparkSubmit.scala  line  944
+2 ../HiBench/sparkbench/micro/src/main/scala/com/intel/sparkbench/micro/ScalaWordCount.scala
+	2.1 ../spark/core/src/main/scala/org/apache/spark/rdd/RDD.scala 
+
 
 # Apache Spark
 

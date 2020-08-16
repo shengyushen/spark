@@ -159,6 +159,7 @@ private[spark] object ClosureCleaner extends Logging {
       closure: AnyRef,
       checkSerializable: Boolean = true,
       cleanTransitively: Boolean = true): Unit = {
+    // SSY call the private clean below
     clean(closure, checkSerializable, cleanTransitively, Map.empty)
   }
 

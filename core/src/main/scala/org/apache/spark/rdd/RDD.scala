@@ -89,7 +89,7 @@ abstract class RDD[T: ClassTag](
     // might have defined nested RDDs without running jobs with them.
     logWarning("Spark does not support nested RDDs (see SPARK-5063)")
   }
-
+  // SSY just return the _sc passed in RDD
   private def sc: SparkContext = {
     if (_sc == null) {
       throw new SparkException(
@@ -428,7 +428,13 @@ abstract class RDD[T: ClassTag](
    *  RDD, and then flattening the results.
    */
   def flatMap[U: ClassTag](f: T => TraversableOnce[U]): RDD[U] = withScope {
+    // SSY change f to a clean version
+    // core/src/main/scala/org/apache/spark/SparkContext.scala
     val cleanF = sc.clean(f)
+    // SSY for this class, map _,_,iter to iter flatMap
+    // core/src/main/scala/org/apache/spark/rdd/MapPartitionsRDD.scala
+    // this is exactly where multi machine works
+    // that file says, MapPartitionsRDD is "An RDD that applies the provided function to every partition of the parent RDD"
     new MapPartitionsRDD[U, T](this, (_, _, iter) => iter.flatMap(cleanF))
   }
 

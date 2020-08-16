@@ -72,7 +72,7 @@ private[deploy] object SparkSubmitAction extends Enumeration {
  * This program handles setting up the classpath with relevant Spark dependencies and provides
  * a layer over the different cluster managers and deploy modes that Spark supports.
  */
-// SSY SparkSubmit 
+// SSY 1.1.2.1 SparkSubmit 
 private[spark] class SparkSubmit extends Logging {
 
   import DependencyUtils._
@@ -154,7 +154,7 @@ private[spark] class SparkSubmit extends Logging {
    * Submit the application using the provided parameters, ensuring to first wrap
    * in a doAs when --proxy-user is specified.
    */
-  // SSY submit a new job
+  // SSY 1.1.2.2 submit a new job
   @tailrec
   private def submit(args: SparkSubmitArguments, uninitLog: Boolean): Unit = {
     //SSY calling runMain
@@ -180,6 +180,7 @@ private[spark] class SparkSubmit extends Logging {
             }
         }
       } else {
+        // SSY 1.1.2.4 
         runMain(args, uninitLog)
       }
     }
@@ -192,6 +193,7 @@ private[spark] class SparkSubmit extends Logging {
     if (args.isStandaloneCluster && args.useRest) {
       try {
         logInfo("Running Spark using the REST application submission protocol.")
+        // SSY 1.1.2.3
         doRunMain()
       } catch {
         // Fail over to use the legacy submission gateway
@@ -876,6 +878,7 @@ private[spark] class SparkSubmit extends Logging {
    * Note that this main class will not be the one provided by the user if we're
    * running cluster deploy mode or python applications.
    */
+  // SSY 1.1.2.5  all sorts of cluster manager such as yarn/mesos and app class such as R/python
   private def runMain(args: SparkSubmitArguments, uninitLog: Boolean): Unit = {
     val (childArgs, childClasspath, sparkConf, childMainClass) = prepareSubmitEnvironment(args)
     // Let the main class re-initialize the logging system once it starts.
@@ -934,6 +937,14 @@ private[spark] class SparkSubmit extends Logging {
     }
 
     try {
+      // SSY 1.1.2.6 real start
+      // app is a trait (virtual) SparkApplication in core/src/main/scala/org/apache/spark/deploy/SparkApplication.scala
+      // core/src/main/scala/org/apache/spark/deploy/Client.scala
+			// SSYSSYSSY this define core/src/main/scala/org/apache/spark/deploy/SparkApplication.scala
+			// core/src/main/scala/org/apache/spark/deploy/rest/RestSubmissionClient.scala
+			// core/src/test/scala/org/apache/spark/deploy/SparkSubmitSuite.scala
+			// resource-managers/kubernetes/core/src/main/scala/org/apache/spark/deploy/k8s/submit/KubernetesClientApplication.scala
+			// resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/Client.scala
       app.start(childArgs.toArray, sparkConf)
     } catch {
       case t: Throwable =>
