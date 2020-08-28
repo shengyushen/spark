@@ -46,6 +46,8 @@ private[spark] abstract class EventLoop[E](name: String) extends Logging {
         while (!stopped.get) {
           val event = eventQueue.take()
           try {
+						// SSY HAHAHAHA, finally find extracting posted event
+						//calling onReceive overrided in ../spark/core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala
             onReceive(event)
           } catch {
             case NonFatal(e) =>

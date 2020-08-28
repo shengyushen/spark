@@ -64,7 +64,7 @@ private[spark] class LiveListenerBus(conf: SparkConf) {
 
   // Visible for testing.
   @volatile private[scheduler] var queuedEvents = new mutable.ListBuffer[SparkListenerEvent]()
-
+	// SSY adding new listener, not event
   /** Add a listener to queue shared by all non-internal listeners. */
   def addToSharedQueue(listener: SparkListenerInterface): Unit = {
     addToQueue(listener, SHARED_QUEUE)
@@ -103,6 +103,9 @@ private[spark] class LiveListenerBus(conf: SparkConf) {
 
       case None =>
         val newQueue = new AsyncEventQueue(queue, conf, metrics, this)
+				// SSY AsyncEventQueue in  ../spark/core/src/main/scala/org/apache/spark/scheduler/AsyncEventQueue.scala 
+				// extending SparkListenerBus ../spark/core/src/main/scala/org/apache/spark/scheduler/SparkListenerBus.scala
+				// extending ListenerBus core/src/main/scala/org/apache/spark/util/ListenerBus.scala which contain addListener
         newQueue.addListener(listener)
         if (started.get()) {
           newQueue.start(sparkContext)
@@ -127,6 +130,7 @@ private[spark] class LiveListenerBus(conf: SparkConf) {
   }
 
   /** Post an event to all queues. */
+	// SSY
   def post(event: SparkListenerEvent): Unit = {
     if (stopped.get()) {
       return
@@ -138,6 +142,7 @@ private[spark] class LiveListenerBus(conf: SparkConf) {
     // synchronization and post events directly to the queues. This should be the most
     // common case during the life of the bus.
     if (queuedEvents == null) {
+			// SSY the real post below
       postToQueues(event)
       return
     }
@@ -155,10 +160,11 @@ private[spark] class LiveListenerBus(conf: SparkConf) {
     // queues.
     postToQueues(event)
   }
-
+	// SSY post to ALL queues? yes, this class is *bus, which means all people listen to it
   private def postToQueues(event: SparkListenerEvent): Unit = {
     val it = queues.iterator()
     while (it.hasNext()) {
+			// SSY queues is a list of AsyncEventQueue in ../spark/core/src/main/scala/org/apache/spark/scheduler/AsyncEventQueue.scala
       it.next().post(event)
     }
   }

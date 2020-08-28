@@ -98,7 +98,7 @@ private class AsyncEventQueue(
   }
 
   private def dispatch(): Unit = LiveListenerBus.withinListenerThread.withValue(true) {
-    var next: SparkListenerEvent = eventQueue.take()
+    var next: SparkListenerEvent = eventQueue.take() // SSY waiting for new event
     while (next != POISON_PILL) {
       val ctx = processingTime.time()
       try {
@@ -155,10 +155,11 @@ private class AsyncEventQueue(
     }
 
     eventCount.incrementAndGet()
-    if (eventQueue.offer(event)) {
+		// SSY LinkedBlockingQueue java predefined
+    if (eventQueue.offer(event)) { // SSY offer is inserting to tail
       return
     }
-
+		// SSY to drop ?
     eventCount.decrementAndGet()
     droppedEvents.inc()
     droppedEventsCounter.incrementAndGet()

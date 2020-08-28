@@ -66,6 +66,7 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    * @note V and C can be different -- for example, one might group an RDD of type
    * (Int, Int) into an RDD of type (Int, Seq[Int]).
    */
+	// SSY ssy2
   def combineByKeyWithClassTag[C](
       createCombiner: V => C,
       mergeValue: (C, V) => C,
@@ -299,7 +300,9 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    * also perform the merging locally on each mapper before sending results to a reducer, similarly
    * to a "combiner" in MapReduce.
    */
+	// SSY ssy1
   def reduceByKey(partitioner: Partitioner, func: (V, V) => V): RDD[(K, V)] = self.withScope {
+		// SSY calling ssy2
     combineByKeyWithClassTag[V]((v: V) => v, func, func, partitioner)
   }
 
@@ -318,7 +321,9 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    * to a "combiner" in MapReduce. Output will be hash-partitioned with the existing partitioner/
    * parallelism level.
    */
+	// SSY this is reduceByKey called by ScalaWordCount
   def reduceByKey(func: (V, V) => V): RDD[(K, V)] = self.withScope {
+		// SSY call ssy1 above
     reduceByKey(defaultPartitioner(self), func)
   }
 
@@ -957,10 +962,12 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    * supporting the key and value types K and V in this RDD. Compress the result with the
    * supplied codec.
    */
+	// SSY saveAsHadoopFile2
   def saveAsHadoopFile[F <: OutputFormat[K, V]](
       path: String,
       codec: Class[_ <: CompressionCodec])(implicit fm: ClassTag[F]): Unit = self.withScope {
     val runtimeClass = fm.runtimeClass
+		// SSY calling full saveAsHadoopFile5
     saveAsHadoopFile(path, keyClass, valueClass, runtimeClass.asInstanceOf[Class[F]], codec)
   }
 
@@ -998,12 +1005,14 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    * Output the RDD to any Hadoop-supported file system, using a Hadoop `OutputFormat` class
    * supporting the key and value types K and V in this RDD. Compress with the supplied codec.
    */
+	// SSY saveAsHadoopFile5
   def saveAsHadoopFile(
       path: String,
       keyClass: Class[_],
       valueClass: Class[_],
       outputFormatClass: Class[_ <: OutputFormat[_, _]],
       codec: Class[_ <: CompressionCodec]): Unit = self.withScope {
+		// SSY saveAsHadoopFileFull
     saveAsHadoopFile(path, keyClass, valueClass, outputFormatClass,
       new JobConf(self.context.hadoopConfiguration), Option(codec))
   }
@@ -1017,6 +1026,7 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
    * There is an example in https://issues.apache.org/jira/browse/SPARK-10063 to show the bad
    * result of using direct output committer with speculation enabled.
    */
+	// SSY saveAsHadoopFileFull
   def saveAsHadoopFile(
       path: String,
       keyClass: Class[_],
@@ -1058,6 +1068,7 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
 
     FileOutputFormat.setOutputPath(hadoopConf,
       SparkHadoopWriterUtils.createPathFromString(path, hadoopConf))
+		// SSY this real action defined below
     saveAsHadoopDataset(hadoopConf)
   }
 
@@ -1088,7 +1099,7 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
   def saveAsHadoopDataset(conf: JobConf): Unit = self.withScope {
     val config = new HadoopMapRedWriteConfigUtil[K, V](new SerializableJobConf(conf))
     SparkHadoopWriter.write(
-      rdd = self,
+      rdd = self, // SSY call write directly with RDD inside
       config = config)
   }
 

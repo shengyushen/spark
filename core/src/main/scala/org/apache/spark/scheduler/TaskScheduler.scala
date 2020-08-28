@@ -52,6 +52,7 @@ private[spark] trait TaskScheduler {
   def stop(): Unit
 
   // Submit a sequence of tasks to run.
+	// SSY its implementation is in core/src/main/scala/org/apache/spark/scheduler/TaskSchedulerImpl.scala
   def submitTasks(taskSet: TaskSet): Unit
 
   // Kill all the tasks in a stage and fail the stage and all the jobs that depend on the stage.

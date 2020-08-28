@@ -74,12 +74,13 @@ object SparkHadoopWriter extends Logging {
     committer.setupJob(jobContext)
 
     // Try to write all RDD partitions as a Hadoop OutputFormat.
-    try {
+    try { // SSY eval rdd here with runJob2 with 2 arg
+			// SSY ../spark/core/src/main/scala/org/apache/spark/SparkContext.scala 
       val ret = sparkContext.runJob(rdd, (context: TaskContext, iter: Iterator[(K, V)]) => {
         // SPARK-24552: Generate a unique "attempt ID" based on the stage and task attempt numbers.
         // Assumes that there won't be more than Short.MaxValue attempts, at least not concurrently.
         val attemptId = (context.stageAttemptNumber << 16) | context.attemptNumber
-
+				// SSY defined below, passing this mapping into runJob
         executeTask(
           context = context,
           config = config,

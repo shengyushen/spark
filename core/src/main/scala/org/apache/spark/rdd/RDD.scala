@@ -106,6 +106,7 @@ abstract class RDD[T: ClassTag](
   }
 
   /** Construct an RDD with just a one-to-one dependency on one parent */
+	// SSY this function convert RDD into SparkContext and dep
   def this(@transient oneParent: RDD[_]) =
     this(oneParent.context, List(new OneToOneDependency(oneParent)))
 
@@ -134,6 +135,7 @@ abstract class RDD[T: ClassTag](
    * Implemented by subclasses to return how this RDD depends on parent RDDs. This method will only
    * be called once, so it is safe to implement a time-consuming computation in it.
    */
+	// SSY with deps passed in from subclass
   protected def getDependencies: Seq[Dependency[_]] = deps
 
   /**
@@ -243,6 +245,7 @@ abstract class RDD[T: ClassTag](
 
   // Our dependencies and partitions will be gotten by calling subclass's methods below, and will
   // be overwritten when we're checkpointed
+	// SSY the saved dependencies_
   @volatile private var dependencies_ : Seq[Dependency[_]] = _
   // When we overwrite the dependencies we keep a weak reference to the old dependencies
   // for user controlled cleanup.
@@ -256,11 +259,15 @@ abstract class RDD[T: ClassTag](
    * Get the list of dependencies of this RDD, taking into account whether the
    * RDD is checkpointed or not.
    */
+	// SSY 
   final def dependencies: Seq[Dependency[_]] = {
+		// SSY defined above
     checkpointRDD.map(r => List(new OneToOneDependency(r))).getOrElse {
+			// SSY defined above
       if (dependencies_ == null) {
         stateLock.synchronized {
           if (dependencies_ == null) {
+						// SSY defined above to be further defined by subclass
             dependencies_ = getDependencies
           }
         }
@@ -420,6 +427,7 @@ abstract class RDD[T: ClassTag](
    */
   def map[U: ClassTag](f: T => U): RDD[U] = withScope {
     val cleanF = sc.clean(f)
+		// SSY only create a graph, not compute immediately
     new MapPartitionsRDD[U, T](this, (_, _, iter) => iter.map(cleanF))
   }
 
@@ -430,11 +438,14 @@ abstract class RDD[T: ClassTag](
   def flatMap[U: ClassTag](f: T => TraversableOnce[U]): RDD[U] = withScope {
     // SSY change f to a clean version
     // core/src/main/scala/org/apache/spark/SparkContext.scala
+		// purpose of clean is removing all referenced outter object in closure, such that current object can be serialized across network
+		// SSY https://www.quora.com/Apache-Spark/What-does-Closure-cleaner-func-mean-in-Spark
     val cleanF = sc.clean(f)
     // SSY for this class, map _,_,iter to iter flatMap
     // core/src/main/scala/org/apache/spark/rdd/MapPartitionsRDD.scala
     // this is exactly where multi machine works
     // that file says, MapPartitionsRDD is "An RDD that applies the provided function to every partition of the parent RDD"
+		// SSY only create this RDD, instead of computing it immediately, so this is NOT a real RDD, it only a proxy MapPartitionsRDD for RDD
     new MapPartitionsRDD[U, T](this, (_, _, iter) => iter.flatMap(cleanF))
   }
 
@@ -860,10 +871,11 @@ abstract class RDD[T: ClassTag](
    * `preservesPartitioning` indicates whether the input function preserves the partitioner, which
    * should be `false` unless this is a pair RDD and the input function doesn't modify the keys.
    */
+	// SSY still mapping DAG, not running action
   def mapPartitions[U: ClassTag](
       f: Iterator[T] => Iterator[U],
       preservesPartitioning: Boolean = false): RDD[U] = withScope {
-    val cleanedF = sc.clean(f)
+    val cleanedF = sc.clean(f) // SSY SparkContext
     new MapPartitionsRDD(
       this,
       (_: TaskContext, _: Int, iter: Iterator[T]) => cleanedF(iter),
@@ -1009,6 +1021,7 @@ abstract class RDD[T: ClassTag](
 
 
   // Actions (launch a job to return a value to the user program)
+	// SSY following are all actions
 
   /**
    * Applies a function f to all elements of this RDD.
@@ -1573,15 +1586,15 @@ abstract class RDD[T: ClassTag](
   /**
    * Save this RDD as a compressed text file, using string representations of elements.
    */
-  def saveAsTextFile(path: String, codec: Class[_ <: CompressionCodec]): Unit = withScope {
-    this.mapPartitions { iter =>
+  def saveAsTextFile(path: String, codec: Class[_ <: CompressionCodec]): Unit = withScope { // SSY withScope is just a function defined above used to wrap all rdd within a scope for visualization
+    this.mapPartitions { iter => // SSY defined above
       val text = new Text()
       iter.map { x =>
         require(x != null, "text files do not allow null rows")
         text.set(x.toString)
         (NullWritable.get(), text)
-      }
-    }.saveAsHadoopFile[TextOutputFormat[NullWritable, Text]](path, codec)
+      } // SSY until now is still building the rdd chain , not actually running defined action
+    }.saveAsHadoopFile[TextOutputFormat[NullWritable, Text]](path, codec) // SSY defined in core/src/main/scala/org/apache/spark/rdd/PairRDDFunctions.scala saveAsHadoopFile2
   }
 
   /**
@@ -1620,6 +1633,7 @@ abstract class RDD[T: ClassTag](
     if (context.checkpointDir.isEmpty) {
       throw new SparkException("Checkpoint directory has not been set in the SparkContext")
     } else if (checkpointData.isEmpty) {
+			// SSY this will saved into checkpointData and remove all parent dependencies
       checkpointData = Some(new ReliableRDDCheckpointData(this))
     }
   }
@@ -1840,6 +1854,7 @@ abstract class RDD[T: ClassTag](
 
   /** Returns the first parent RDD */
   protected[spark] def firstParent[U: ClassTag]: RDD[U] = {
+		// SSY dependencies defined above
     dependencies.head.rdd.asInstanceOf[RDD[U]]
   }
 
@@ -2082,6 +2097,7 @@ abstract class RDD[T: ClassTag](
  * For example, [[RDD.rddToPairRDDFunctions]] converts an RDD into a [[PairRDDFunctions]] for
  * key-value-pair RDDs, and enabling extra functionalities such as `PairRDDFunctions.reduceByKey`.
  */
+// SSY exactly, calling RDD on reduceByKey will actually call to PairRDDFunctions.reduceByKey
 object RDD {
 
   private[spark] val CHECKPOINT_ALL_MARKED_ANCESTORS =
@@ -2092,6 +2108,7 @@ object RDD {
   // them automatically. However, we still keep the old functions in SparkContext for backward
   // compatibility and forward to the following functions directly.
 
+// SSY exactly, calling RDD on reduceByKey will actually call to PairRDDFunctions.reduceByKey
   implicit def rddToPairRDDFunctions[K, V](rdd: RDD[(K, V)])
     (implicit kt: ClassTag[K], vt: ClassTag[V], ord: Ordering[K] = null): PairRDDFunctions[K, V] = {
     new PairRDDFunctions(rdd)

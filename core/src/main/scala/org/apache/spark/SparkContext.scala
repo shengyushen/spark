@@ -68,7 +68,7 @@ import org.apache.spark.storage.BlockManagerMessages.TriggerThreadDump
 import org.apache.spark.ui.{ConsoleProgressBar, SparkUI}
 import org.apache.spark.util._
 import org.apache.spark.util.logging.DriverLogger
-
+// SSY very important
 /**
  * Main entry point for Spark functionality. A SparkContext represents the connection to a Spark
  * cluster, and can be used to create RDDs, accumulators and broadcast variables on that cluster.
@@ -313,7 +313,7 @@ class SparkContext(config: SparkConf) extends Logging {
   private[spark] def taskScheduler_=(ts: TaskScheduler): Unit = {
     _taskScheduler = ts
   }
-
+	// SSY 
   private[spark] def dagScheduler: DAGScheduler = _dagScheduler
   private[spark] def dagScheduler_=(ds: DAGScheduler): Unit = {
     _dagScheduler = ds
@@ -379,7 +379,7 @@ class SparkContext(config: SparkConf) extends Logging {
     Utils.setLogLevel(org.apache.log4j.Level.toLevel(upperCased))
   }
 
-  try {
+  try { //SSY seems to be constructor of class SparkContext
     _conf = config.clone()
     _conf.validateSettings()
 
@@ -536,7 +536,7 @@ class SparkContext(config: SparkConf) extends Logging {
     val (sched, ts) = SparkContext.createTaskScheduler(this, master, deployMode)
     _schedulerBackend = sched
     _taskScheduler = ts
-    _dagScheduler = new DAGScheduler(this)
+    _dagScheduler = new DAGScheduler(this) // SSY function this withj only one arg in DAGScheduler definition 
     _heartbeatReceiver.ask[Boolean](TaskSchedulerIsSet)
 
     val _executorMetricsSource =
@@ -555,6 +555,7 @@ class SparkContext(config: SparkConf) extends Logging {
 
     // start TaskScheduler after taskScheduler sets DAGScheduler reference in DAGScheduler's
     // constructor
+		// SSY start taskScheduler and set it to DAGScheduler
     _taskScheduler.start()
 
     _applicationId = _taskScheduler.applicationId()
@@ -1097,6 +1098,7 @@ class SparkContext(config: SparkConf) extends Logging {
     // A Hadoop configuration can be about 10 KiB, which is pretty big, so broadcast it.
     val confBroadcast = broadcast(new SerializableConfiguration(hadoopConfiguration))
     val setInputPathsFunc = (jobConf: JobConf) => FileInputFormat.setInputPaths(jobConf, path)
+		// SSY the resulting RDD
     new HadoopRDD(
       this,
       confBroadcast,
@@ -2094,6 +2096,7 @@ class SparkContext(config: SparkConf) extends Logging {
    * partitions of the target RDD, e.g. for operations like `first()`
    * @param resultHandler callback to pass each result to
    */
+	// SSY the real runJob4 called by all other runJob
   def runJob[T, U: ClassTag](
       rdd: RDD[T],
       func: (TaskContext, Iterator[T]) => U,
@@ -2108,9 +2111,12 @@ class SparkContext(config: SparkConf) extends Logging {
     if (conf.getBoolean("spark.logLineage", false)) {
       logInfo("RDD's recursive dependencies:\n" + rdd.toDebugString)
     }
+		// SSY all call dagScheduler of type  DAGScheduler
+		// ../spark/core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala
     dagScheduler.runJob(rdd, cleanedFunc, partitions, callSite, resultHandler, localProperties.get)
-    progressBar.foreach(_.finishAll())
-    rdd.doCheckpoint()
+		// SSY ../spark/core/src/main/scala/org/apache/spark/ui/ConsoleProgressBar.scala
+    progressBar.foreach(_.finishAll()) 
+    rdd.doCheckpoint() // SSY save dog life
   }
 
   /**
@@ -2124,12 +2130,14 @@ class SparkContext(config: SparkConf) extends Logging {
    * @return in-memory collection with a result of the job (each collection element will contain
    * a result from one partition)
    */
+	// SSY runJob3
   def runJob[T, U: ClassTag](
       rdd: RDD[T],
-      func: (TaskContext, Iterator[T]) => U,
+      func: (TaskContext, Iterator[T]) => U, // SSY this runJob3 diff with the one below in that its func have two arg
       partitions: Seq[Int]): Array[U] = {
     val results = new Array[U](partitions.size)
-    runJob[T, U](rdd, func, partitions, (index, res) => results(index) = res)
+		// SSY runJob4
+    runJob[T, U](rdd, func, partitions, (index, res) => results(index) = res) // SSY call back to extract res and insert into results, and return it back
     results
   }
 
@@ -2160,7 +2168,9 @@ class SparkContext(config: SparkConf) extends Logging {
    * @return in-memory collection with a result of the job (each collection element will contain
    * a result from one partition)
    */
+	// SSY runJob2
   def runJob[T, U: ClassTag](rdd: RDD[T], func: (TaskContext, Iterator[T]) => U): Array[U] = {
+		// SSY by default use full partition runJob3
     runJob(rdd, func, 0 until rdd.partitions.length)
   }
 
@@ -2274,6 +2284,7 @@ class SparkContext(config: SparkConf) extends Logging {
     assertNotStopped()
     val callSite = getCallSite()
     var result: MapOutputStatistics = null
+		// SSY this is where multi machine in invoked
     val waiter = dagScheduler.submitMapStage(
       dependency,
       (r: MapOutputStatistics) => { result = r },
@@ -2372,6 +2383,7 @@ class SparkContext(config: SparkConf) extends Logging {
    */
   private[spark] def clean[F <: AnyRef](f: F, checkSerializable: Boolean = true): F = {
     ClosureCleaner.clean(f, checkSerializable)
+		// SSY send back f itself
     f
   }
 
@@ -2429,6 +2441,7 @@ class SparkContext(config: SparkConf) extends Logging {
    * This should be called after all internal listeners have been registered with the listener bus
    * (e.g. after the web UI and event logging listeners have been registered).
    */
+	// SSY start
   private def setupAndStartListenerBus(): Unit = {
     try {
       conf.get(EXTRA_LISTENERS).foreach { classNames =>
@@ -2851,6 +2864,7 @@ object SparkContext extends Logging {
         val scheduler = new TaskSchedulerImpl(sc)
         val localCluster = new LocalSparkCluster(
           numSlaves.toInt, coresPerSlave.toInt, memoryPerSlaveInt, sc.conf)
+				// SSY start cluster of driver and worker
         val masterUrls = localCluster.start()
         val backend = new StandaloneSchedulerBackend(scheduler, sc, masterUrls)
         scheduler.initialize(backend)

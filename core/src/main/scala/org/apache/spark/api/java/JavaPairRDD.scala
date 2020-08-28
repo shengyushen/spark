@@ -299,6 +299,7 @@ class JavaPairRDD[K, V](val rdd: RDD[(K, V)])
    * to a "combiner" in MapReduce.
    */
   def reduceByKey(partitioner: Partitioner, func: JFunction2[V, V, V]): JavaPairRDD[K, V] =
+		// SSY here we find a serious problem, this rdd is a RDD, which has NO reduceByKey function, if we again fall back to 
     fromRDD(rdd.reduceByKey(partitioner, func))
 
   /**
@@ -402,6 +403,7 @@ class JavaPairRDD[K, V](val rdd: RDD[(K, V)])
    * to a "combiner" in MapReduce. Output will be hash-partitioned with numPartitions partitions.
    */
   def reduceByKey(func: JFunction2[V, V, V], numPartitions: Int): JavaPairRDD[K, V] =
+		// SSY defined below
     fromRDD(rdd.reduceByKey(func, numPartitions))
 
   /**
@@ -545,7 +547,10 @@ class JavaPairRDD[K, V](val rdd: RDD[(K, V)])
    * to a "combiner" in MapReduce. Output will be hash-partitioned with the existing partitioner/
    * parallelism level.
    */
+	// SSY 1 parameter
   def reduceByKey(func: JFunction2[V, V, V]): JavaPairRDD[K, V] = {
+		// SSY defaultPartitioner get the partition
+		// SSY and then call reduceByKey above with 2 parameter
     fromRDD(reduceByKey(defaultPartitioner(rdd), func))
   }
 

@@ -6,6 +6,9 @@ invoking script
 		1.1.2 ./core/src/main/scala/org/apache/spark/deploy/SparkSubmit.scala  line  944
 2 ../HiBench/sparkbench/micro/src/main/scala/com/intel/sparkbench/micro/ScalaWordCount.scala
 	2.1 ../spark/core/src/main/scala/org/apache/spark/rdd/RDD.scala 
+			core/src/main/scala/org/apache/spark/rdd/PairRDDFunctions.scala define additional functions for RDD with implicit linking
+			core/src/main/scala/org/apache/spark/rdd/MapPartitionsRDD.scala define implimentation of functions such as compute
+			./core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala  do scheduler
 
 
 # Apache Spark

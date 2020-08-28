@@ -42,7 +42,7 @@ private[spark] class MapPartitionsRDD[U: ClassTag, T: ClassTag](
     preservesPartitioning: Boolean = false,
     isFromBarrier: Boolean = false,
     isOrderSensitive: Boolean = false)
-  extends RDD[U](prev) {
+  extends RDD[U](prev) {// SSY there is no such RDD constructor with only 1 arg, but in RDD.scala, there is this function that convert prev RDD to its SparkContext and dependency
 
   override val partitioner = if (preservesPartitioning) firstParent[T].partitioner else None
 
@@ -50,6 +50,7 @@ private[spark] class MapPartitionsRDD[U: ClassTag, T: ClassTag](
 
   // SSY real compute function that may called by downstream
   // SSY notice that firstParent is invodked
+	// SSY firstParent is defined in core/src/main/scala/org/apache/spark/rdd/RDD.scala
   override def compute(split: Partition, context: TaskContext): Iterator[U] =
     f(context, split.index, firstParent[T].iterator(split, context))
 
