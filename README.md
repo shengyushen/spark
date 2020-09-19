@@ -8,7 +8,39 @@ invoking script
 	2.1 ../spark/core/src/main/scala/org/apache/spark/rdd/RDD.scala 
 			core/src/main/scala/org/apache/spark/rdd/PairRDDFunctions.scala define additional functions for RDD with implicit linking
 			core/src/main/scala/org/apache/spark/rdd/MapPartitionsRDD.scala define implimentation of functions such as compute
-			./core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala  do scheduler
+			./core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala  post to eventProcessLoop
+			core/src/main/scala/org/apache/spark/util/EventLoop.scala  extracting job from eventProcessLoop
+			./core/src/main/scala/org/apache/spark/SparkContext.scala
+
+			./core/src/main/scala/org/apache/spark/executor/Executor.scala
+			./core/src/main/scala/org/apache/spark/scheduler/Stage.scala
+			./core/src/main/scala/org/apache/spark/rdd/HadoopRDD.scala
+
+all sorts of RDD
+
+core/src/main/scala/org/apache/spark/rdd/BlockRDD.scala
+core/src/main/scala/org/apache/spark/rdd/CartesianRDD.scala
+core/src/main/scala/org/apache/spark/rdd/CoalescedRDD.scala
+core/src/main/scala/org/apache/spark/rdd/HadoopRDD.scala
+core/src/main/scala/org/apache/spark/rdd/NewHadoopRDD.scala
+core/src/main/scala/org/apache/spark/rdd/ParallelCollectionRDD.scala
+core/src/main/scala/org/apache/spark/rdd/PartitionerAwareUnionRDD.scala
+core/src/main/scala/org/apache/spark/rdd/PartitionwiseSampledRDD.scala
+core/src/main/scala/org/apache/spark/rdd/RDD.scala
+core/src/main/scala/org/apache/spark/rdd/ReliableCheckpointRDD.scala
+core/src/main/scala/org/apache/spark/rdd/ShuffledRDD.scala
+core/src/main/scala/org/apache/spark/rdd/UnionRDD.scala
+core/src/main/scala/org/apache/spark/rdd/ZippedPartitionsRDD.scala
+core/src/main/scala/org/apache/spark/rdd/ZippedWithIndexRDD.scala
+external/kafka-0-10/src/main/scala/org/apache/spark/streaming/kafka010/KafkaRDD.scala
+external/kafka-0-10-sql/src/main/scala/org/apache/spark/sql/kafka010/KafkaSourceRDD.scala
+mllib/src/main/scala/org/apache/spark/mllib/rdd/SlidingRDD.scala
+sql/core/src/main/scala/org/apache/spark/sql/execution/ShuffledRowRDD.scala
+sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/FileScanRDD.scala
+sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/v2/DataSourceRDD.scala
+sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/continuous/ContinuousDataSourceRDD.scala
+sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/state/StateStoreRDD.scala
+streaming/src/main/scala/org/apache/spark/streaming/rdd/WriteAheadLogBackedBlockRDD.scala
 
 
 # Apache Spark

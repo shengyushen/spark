@@ -531,7 +531,7 @@ private[rpc] class NettyRpcEnvFactory extends RpcEnvFactory with Logging {
 private[netty] class NettyRpcEndpointRef(
     @transient private val conf: SparkConf,
     private val endpointAddress: RpcEndpointAddress,
-    @transient @volatile private var nettyEnv: NettyRpcEnv) extends RpcEndpointRef(conf) {
+    @transient @volatile private var nettyEnv: NettyRpcEnv) extends RpcEndpointRef(conf) { // SSY core/src/main/scala/org/apache/spark/rpc/RpcEndpointRef.scala
 
   @transient @volatile var client: TransportClient = _
 
@@ -558,7 +558,7 @@ private[netty] class NettyRpcEndpointRef(
   override def ask[T: ClassTag](message: Any, timeout: RpcTimeout): Future[T] = {
     askAbortable(message, timeout).future
   }
-
+	// SSY send for NettyRpcEndpointRef
   override def send(message: Any): Unit = {
     require(message != null, "Message is null")
     nettyEnv.send(new RequestMessage(nettyEnv.address, this, message))

@@ -61,7 +61,7 @@ private[memory] abstract class MemoryPool(lock: Object) {
     require(delta >= 0)
     require(delta <= _poolSize)
     require(_poolSize - delta >= memoryUsed)
-    _poolSize -= delta
+    _poolSize -= delta // SSY just reduce the record size number?
   }
 
   /**

@@ -83,7 +83,7 @@ private[spark] class LocalEndpoint(
       executor.stop()
       context.reply(true)
   }
-
+	// SSY notice this reviveOffers is for class localEndpoint not LocalSchedulerBackend
   def reviveOffers(): Unit = {
     // local mode doesn't support extra resources like GPUs right now
     val offers = IndexedSeq(new WorkerOffer(localExecutorId, localExecutorHostname, freeCores,
@@ -107,6 +107,7 @@ private[spark] class LocalSchedulerBackend(
   extends SchedulerBackend with ExecutorBackend with Logging {
 
   private val appId = "local-" + System.currentTimeMillis
+	// SSY core/src/main/scala/org/apache/spark/rpc/RpcEndpointRef.scala
   private var localEndpoint: RpcEndpointRef = null
   private val userClassPath = getUserClasspath(conf)
   private val listenerBus = scheduler.sc.listenerBus
@@ -128,8 +129,12 @@ private[spark] class LocalSchedulerBackend(
   launcherBackend.connect()
 
   override def start(): Unit = {
+		// SSY RpcEnv
     val rpcEnv = SparkEnv.get.rpcEnv
     val executorEndpoint = new LocalEndpoint(rpcEnv, userClassPath, scheduler, this, totalCores)
+		// SSY RpcEndpointRef 
+		// SSY RpcEnv dont have setupEndpoint in 
+		// SSY but this have core/src/main/scala/org/apache/spark/rpc/netty/NettyRpcEnv.scala
     localEndpoint = rpcEnv.setupEndpoint("LocalSchedulerBackendEndpoint", executorEndpoint)
     listenerBus.post(SparkListenerExecutorAdded(
       System.currentTimeMillis,
@@ -143,8 +148,8 @@ private[spark] class LocalSchedulerBackend(
   override def stop(): Unit = {
     stop(SparkAppHandle.State.FINISHED)
   }
-
   override def reviveOffers(): Unit = {
+		// SSY empty  core/src/main/scala/org/apache/spark/rpc/RpcEndpointRef.scala
     localEndpoint.send(ReviveOffers)
   }
 

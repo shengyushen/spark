@@ -73,7 +73,7 @@ class MemoryStoreSuite
     }
     memoryStore =
       new MemoryStore(conf, blockInfoManager, serializerManager, memManager, blockEvictionHandler)
-    memManager.setMemoryStore(memoryStore)
+    memManager.setMemoryStore(memoryStore) // SSY set the store with its self ref above
     (memoryStore, blockInfoManager)
   }
 

@@ -81,7 +81,7 @@ private[spark] class BlockStoreShuffleReader[K, C](
       SparkEnv.get.conf.get(config.SHUFFLE_DETECT_CORRUPT_MEMORY),
       readMetrics,
       fetchContinuousBlocksInBatch).toCompletionIterator
-
+		// SSY find the dependency's serielizer
     val serializerInstance = dep.serializer.newInstance()
 
     // Create a key/value iterator for each stream
@@ -89,6 +89,7 @@ private[spark] class BlockStoreShuffleReader[K, C](
       // Note: the asKeyValueIterator below wraps a key/value iterator inside of a
       // NextIterator. The NextIterator makes sure that close() is called on the
       // underlying InputStream when all records have been read.
+			// all deserializeStream
       serializerInstance.deserializeStream(wrappedStream).asKeyValueIterator
     }
 
@@ -104,18 +105,18 @@ private[spark] class BlockStoreShuffleReader[K, C](
     val interruptibleIter = new InterruptibleIterator[(Any, Any)](context, metricIter)
 
     val aggregatedIter: Iterator[Product2[K, C]] = if (dep.aggregator.isDefined) {
-      if (dep.mapSideCombine) {
+      if (dep.mapSideCombine) { // SSY up stream can combine first
         // We are reading values that are already combined
         val combinedKeyValuesIterator = interruptibleIter.asInstanceOf[Iterator[(K, C)]]
         dep.aggregator.get.combineCombinersByKey(combinedKeyValuesIterator, context)
-      } else {
+      } else { // SSY read them all to shuffle task
         // We don't know the value type, but also don't care -- the dependency *should*
         // have made sure its compatible w/ this aggregator, which will convert the value
         // type to the combined type C
         val keyValuesIterator = interruptibleIter.asInstanceOf[Iterator[(K, Nothing)]]
         dep.aggregator.get.combineValuesByKey(keyValuesIterator, context)
       }
-    } else {
+    } else { // SSY no aggregator
       interruptibleIter.asInstanceOf[Iterator[Product2[K, C]]]
     }
 

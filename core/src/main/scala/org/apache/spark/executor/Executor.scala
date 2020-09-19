@@ -235,11 +235,14 @@ private[spark] class Executor(
   private[spark] def decommission(): Unit = {
     decommissioned = true
   }
-
+	// SSY from core/src/main/scala/org/apache/spark/executor/CoarseGrainedExecutorBackend.scala 
   def launchTask(context: ExecutorBackend, taskDescription: TaskDescription): Unit = {
     val tr = new TaskRunner(context, taskDescription)
+		// SSY inserting new task
     runningTasks.put(taskDescription.taskId, tr)
-    threadPool.execute(tr)
+		// executing this with threadPool
+		// SSY core/src/main/scala/org/apache/spark/util/ThreadUtils.scala
+    threadPool.execute(tr) // SSY calling def run above
     if (decommissioned) {
       log.error(s"Launching a task while in decommissioned state.")
     }
@@ -396,13 +399,13 @@ private[spark] class Executor(
       setTaskFinishedAndClearInterruptStatus()
       (accums, accUpdates)
     }
-
+		// SSY run
     override def run(): Unit = {
       setMDCForTask(taskName, mdcProperties)
       threadId = Thread.currentThread.getId
       Thread.currentThread.setName(threadName)
       val threadMXBean = ManagementFactory.getThreadMXBean
-      val taskMemoryManager = new TaskMemoryManager(env.memoryManager, taskId)
+      val taskMemoryManager = new TaskMemoryManager(env.memoryManager, taskId) // SSY TaskMemoryManager using env.memoryManager
       val deserializeStartTimeNs = System.nanoTime()
       val deserializeStartCpuTime = if (threadMXBean.isCurrentThreadCpuTimeSupported) {
         threadMXBean.getCurrentThreadCpuTime
@@ -422,10 +425,11 @@ private[spark] class Executor(
         Executor.taskDeserializationProps.set(taskDescription.properties)
 
         updateDependencies(taskDescription.addedFiles, taskDescription.addedJars)
+				// SSY core/src/main/scala/org/apache/spark/scheduler/Task.scala
         task = ser.deserialize[Task[Any]](
           taskDescription.serializedTask, Thread.currentThread.getContextClassLoader)
         task.localProperties = taskDescription.properties
-        task.setTaskMemoryManager(taskMemoryManager)
+        task.setTaskMemoryManager(taskMemoryManager) // SSY use this memory manager
 
         // If this task has been killed before we deserialized it, let's quit now. Otherwise,
         // continue executing the task.
@@ -457,14 +461,14 @@ private[spark] class Executor(
         } else 0L
         var threwException = true
         val value = Utils.tryWithSafeFinally {
-          val res = task.run(
+          val res = task.run( //SSY core/src/main/scala/org/apache/spark/scheduler/Task.scala
             taskAttemptId = taskId,
             attemptNumber = taskDescription.attemptNumber,
             metricsSystem = env.metricsSystem,
             resources = taskDescription.resources)
           threwException = false
           res
-        } {
+        } { // SSY releasing all resource
           val releasedLocks = env.blockManager.releaseAllLocksForTask(taskId)
           val freedMemory = taskMemoryManager.cleanUpAllAllocatedMemory()
 

@@ -79,10 +79,12 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
       if (mapSideCombine) {
         throw new SparkException("Cannot use map-side combining with array keys.")
       }
+			// SSY hash partitioner no longer supported in array key case
       if (partitioner.isInstanceOf[HashPartitioner]) {
         throw new SparkException("HashPartitioner cannot partition array keys.")
       }
     }
+		// create aggregator
     val aggregator = new Aggregator[K, V, C](
       self.context.clean(createCombiner),
       self.context.clean(mergeValue),
@@ -94,7 +96,7 @@ class PairRDDFunctions[K, V](self: RDD[(K, V)])
       }, preservesPartitioning = true)
     } else {
       new ShuffledRDD[K, V, C](self, partitioner)
-        .setSerializer(serializer)
+        .setSerializer(serializer)// SSY setting serializer and aggregator
         .setAggregator(aggregator)
         .setMapSideCombine(mapSideCombine)
     }

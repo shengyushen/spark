@@ -51,7 +51,7 @@ import org.apache.spark.util._
  * The high-level scheduling layer that implements stage-oriented scheduling. It computes a DAG of
  * stages for each job, keeps track of which RDDs and stage outputs are materialized, and finds a
  * minimal schedule SSY <notice ths minimal word> to run the job. It then submits stages as TaskSets to an underlying
- * TaskScheduler implementation that runs them on the cluster. A TaskSet contains fully independent
+ * TaskScheduler implementation that runs them on the cluster SSY<notice that run them on cluster>. A TaskSet contains fully independent
  * tasks that can run right away based on the data that's already on the cluster (e.g. map output
  * files from previous stages), though it may fail if this data becomes unavailable.
  *
@@ -791,7 +791,8 @@ private[spark] class DAGScheduler(
     val waiter = new JobWaiter[U](this, jobId, partitions.size, resultHandler)
 		// eventProcessLoop of DAGSchedulerEventProcessLoop  seems to be used in job scheduling, while listenerBus only used for logging
 		// SSY eventProcessLoop do not have post, but its base class core/src/main/scala/org/apache/spark/util/EventLoop.scala do have
-    eventProcessLoop.post(JobSubmitted(
+    eventProcessLoop.post(JobSubmitted( // SSY core/src/main/scala/org/apache/spark/scheduler/DAGSchedulerEvent.scala
+			// SSY search JobSubmitted below
       jobId, rdd, func2, partitions.toArray, callSite, waiter,
       Utils.cloneProperties(properties)))
     waiter
@@ -811,6 +812,7 @@ private[spark] class DAGScheduler(
    *
    * @note Throws `Exception` when the job fails
    */
+	// SSY calling from ./core/src/main/scala/org/apache/spark/SparkContext.scala
   def runJob[T, U](
       rdd: RDD[T],
       func: (TaskContext, Iterator[T]) => U,
@@ -820,7 +822,7 @@ private[spark] class DAGScheduler(
       properties: Properties): Unit = {
     val start = System.nanoTime
 		// return a waiter object
-    val waiter = submitJob(rdd, func, partitions, callSite, resultHandler, properties)
+    val waiter = submitJob(rdd, func, partitions, callSite, resultHandler, properties) //SSY 
 		// wait for waiter
     ThreadUtils.awaitReady(waiter.completionFuture, Duration.Inf)
 		// SSY wait for finish
@@ -1054,19 +1056,19 @@ private[spark] class DAGScheduler(
   private[scheduler] def handleGetTaskResult(taskInfo: TaskInfo): Unit = {
     listenerBus.post(SparkListenerTaskGettingResult(taskInfo))
   }
-
+	// SSY called above
   private[scheduler] def handleJobSubmitted(jobId: Int,
       finalRDD: RDD[_],
       func: (TaskContext, Iterator[_]) => _,
       partitions: Array[Int],
-      callSite: CallSite,
+      callSite: CallSite, // SSY from Utils.getCallSite
       listener: JobListener,
       properties: Properties): Unit = {
     var finalStage: ResultStage = null
     try {
       // New stage creation may throw an exception if, for example, jobs are run on a
       // HadoopRDD whose underlying HDFS files have been deleted.
-			// SSY nothing special, just create the final stage
+			// SSY nothing special, just create the final stage ResultStage
       finalStage = createResultStage(finalRDD, func, partitions, jobId, callSite)
     } catch {
       case e: BarrierJobSlotsNumberCheckFailed =>
@@ -1078,11 +1080,12 @@ private[spark] class DAGScheduler(
           s"but only ${e.maxConcurrentTasks} are available. " +
           s"Will retry up to ${maxFailureNumTasksCheck - numCheckFailures + 1} more times")
 
-        if (numCheckFailures <= maxFailureNumTasksCheck) {
+        if (numCheckFailures <= maxFailureNumTasksCheck) { // SSY not yet enough time to try
+					//SSY ScheduledExecutorService  delayed amount of time
           messageScheduler.schedule(
             new Runnable {
               override def run(): Unit = eventProcessLoop.post(JobSubmitted(jobId, finalRDD, func,
-                partitions, callSite, listener, properties))
+                partitions, callSite, listener, properties)) // SSY submit again
             },
             timeIntervalNumTasksCheck,
             TimeUnit.SECONDS
@@ -1091,7 +1094,8 @@ private[spark] class DAGScheduler(
         } else {
           // Job failed, clear internal data.
           barrierJobIdToNumTasksCheckFailures.remove(jobId)
-          listener.jobFailed(e)
+					// SSY do nothing but log
+          listener.jobFailed(e) // SSY JobListener have such empty function, while JobWaiter have full imp
           return
         }
 
@@ -1114,14 +1118,14 @@ private[spark] class DAGScheduler(
     val jobSubmissionTime = clock.getTimeMillis()
     jobIdToActiveJob(jobId) = job
     activeJobs += job
-    finalStage.setActiveJob(job)
+    finalStage.setActiveJob(job) // SSY only set active job
     val stageIds = jobIdToStageIds(jobId).toArray
     val stageInfos = stageIds.flatMap(id => stageIdToStage.get(id).map(_.latestInfo))
 		// SSY again post to listenerBus
     listenerBus.post(
       SparkListenerJobStart(job.jobId, jobSubmissionTime, stageInfos, properties))
-		// SSY submiting stage
-    submitStage(finalStage)
+		// SSY submiting stage defined below
+    submitStage(finalStage) 
   }
 
   private[scheduler] def handleMapStageSubmitted(jobId: Int,
@@ -1179,9 +1183,10 @@ private[spark] class DAGScheduler(
         if (missing.isEmpty) {
           logInfo("Submitting " + stage + " (" + stage.rdd + "), which has no missing parents")
           submitMissingTasks(stage, jobId.get) // SSY this is func called on the road when no more missing parent, but what if I have missing parent, why I dont submit current task computation
+					// SSY jobId is current active job
         } else {
           for (parent <- missing) {
-            submitStage(parent) // SSY recursive submit parent
+            submitStage(parent) // SSY recursive submit parent stage
           }
           waitingStages += stage
         }
@@ -1213,7 +1218,7 @@ private[spark] class DAGScheduler(
   }
 
   /** Called when stage's parents are available and we can now do its task. */
-	// SSYSSYSSYSSY
+	// SSY submitting a stage's tasks
   private def submitMissingTasks(stage: Stage, jobId: Int): Unit = {
     logDebug("submitMissingTasks(" + stage + ")")
 
@@ -1227,7 +1232,10 @@ private[spark] class DAGScheduler(
     }
 
     // Figure out the indexes of partition ids to compute.
-    val partitionsToCompute: Seq[Int] = stage.findMissingPartitions()
+		// SSY abstract defined in core/src/main/scala/org/apache/spark/scheduler/Stage.scala
+		// SSY core/src/main/scala/org/apache/spark/scheduler/ResultStage.scala
+		// SSY core/src/main/scala/org/apache/spark/scheduler/ShuffleMapStage.scala
+    val partitionsToCompute: Seq[Int] = stage.findMissingPartitions() // SSY but only the dest, not scheduling affinity
 
     // Use the scheduling pool, job group, description, etc. from an ActiveJob associated
     // with this Stage
@@ -1247,15 +1255,20 @@ private[spark] class DAGScheduler(
         outputCommitCoordinator.stageStart(
           stage = s.id, maxPartitionId = s.rdd.partitions.length - 1)
     }
-    val taskIdToLocations: Map[Int, Seq[TaskLocation]] = try {
-      stage match {
+    val taskIdToLocations: Map[Int, Seq[TaskLocation]] = try { // SSY TaskLocation 
+      stage match { // SSY there are only two type of stages, shuffle and result
         case s: ShuffleMapStage =>
-					// SSY for deleted partition in RDD, only a simple map to find out prefer location ? nothing else
+					// SSY partition is not preferred location
+					// SSY Stage in core/src/main/scala/org/apache/spark/scheduler/Stage.scala
+					// according to Stage defined above, rdd are both the source rdd
+					// So I align the shuffle result with source partition location
+					// may be the stage have difference mapping on s.partitions
+					// SSY it seems I get location when run backward, so the input RDD's location should have been determined when creating graph
           partitionsToCompute.map { id => (id, getPreferredLocs(stage.rdd, id))}.toMap
         case s: ResultStage =>
           partitionsToCompute.map { id =>
             val p = s.partitions(id)
-            (id, getPreferredLocs(stage.rdd, p))
+            (id, getPreferredLocs(stage.rdd, p)) // SSY even the id is the same as input partition
           }.toMap
       }
     } catch {
@@ -1266,7 +1279,7 @@ private[spark] class DAGScheduler(
         runningStages -= stage
         return
     }
-
+		//SSY create a new attempt, nothing else
     stage.makeNewStageAttempt(partitionsToCompute.size, taskIdToLocations.values.toSeq)
 
     // If there are tasks to execute, record the submission time of the stage. Otherwise,
@@ -1284,7 +1297,7 @@ private[spark] class DAGScheduler(
     // task gets a different copy of the RDD. This provides stronger isolation between tasks that
     // might modify state of objects referenced in their closures. This is necessary in Hadoop
     // where the JobConf/Configuration object is not thread-safe.
-		//SSY broadcast binary code? 
+		//SSY broadcast binary code to all nodes running this task cool!!!
     var taskBinary: Broadcast[Array[Byte]] = null
     var partitions: Array[Partition] = null
     try {
@@ -1297,10 +1310,10 @@ private[spark] class DAGScheduler(
       RDDCheckpointData.synchronized {
         taskBinaryBytes = stage match {// SSY taskBinaryBytes contain the rdd and jvm code to far side
           case stage: ShuffleMapStage =>
-            JavaUtils.bufferToArray(
+            JavaUtils.bufferToArray( // SSY shuffleDep only in ShuffleMapStage
               closureSerializer.serialize((stage.rdd, stage.shuffleDep): AnyRef))
           case stage: ResultStage =>
-            JavaUtils.bufferToArray(closureSerializer.serialize((stage.rdd, stage.func): AnyRef)) // SSY god, send a function to far side?
+            JavaUtils.bufferToArray(closureSerializer.serialize((stage.rdd, stage.func): AnyRef)) // SSY func is map(func) passing from user program
         }
 
         partitions = stage.rdd.partitions
@@ -1310,7 +1323,7 @@ private[spark] class DAGScheduler(
         logWarning(s"Broadcasting large task binary with size " +
           s"${Utils.bytesToString(taskBinaryBytes.length)}")
       }
-      taskBinary = sc.broadcast(taskBinaryBytes) // SSY god, broadcasting!!!!
+      taskBinary = sc.broadcast(taskBinaryBytes) // SSY only create taskBinary of Broadcast type in SparkContext
     } catch {
       // In the case of a failure during serialization, abort the stage.
       case e: NotSerializableException =>
@@ -1363,6 +1376,8 @@ private[spark] class DAGScheduler(
       logInfo(s"Submitting ${tasks.size} missing tasks from $stage (${stage.rdd}) (first 15 " +
         s"tasks are for partitions ${tasks.take(15).map(_.partitionId)})")
 			// SSY finally send them to taskScheduler
+			// I still have not find its calling Broadcast of taskBinary
+			// core/src/main/scala/org/apache/spark/scheduler/TaskSchedulerImpl.scala
       taskScheduler.submitTasks(new TaskSet(
         tasks.toArray, stage.id, stage.latestInfo.attemptNumber, jobId, properties,
         stage.resourceProfileId))
@@ -1381,6 +1396,7 @@ private[spark] class DAGScheduler(
         case stage : ResultStage =>
           logDebug(s"Stage ${stage} is actually done; (partitions: ${stage.numPartitions})")
       }
+			// SSY other stage behind
       submitWaitingChildStages(stage)
     }
   }
@@ -2184,7 +2200,7 @@ private[spark] class DAGScheduler(
    */
   private[spark]
   def getPreferredLocs(rdd: RDD[_], partition: Int): Seq[TaskLocation] = {
-    getPreferredLocsInternal(rdd, partition, new HashSet)
+    getPreferredLocsInternal(rdd, partition, new HashSet) // HashSet is used to avoid revisit visited vertex
   }
 
   /**
@@ -2194,7 +2210,7 @@ private[spark] class DAGScheduler(
    * methods (getCacheLocs()); please be careful when modifying this method, because any new
    * DAGScheduler state accessed by it may require additional synchronization.
    */
-  private def getPreferredLocsInternal(
+  private def getPreferredLocsInternal( // SSY partition is an INT, while TaskLocation may be host , host + executorID or HDFS
       rdd: RDD[_],
       partition: Int,
       visited: HashSet[(RDD[_], Int)]): Seq[TaskLocation] = {
@@ -2205,11 +2221,12 @@ private[spark] class DAGScheduler(
       return Nil
     }
     // If the partition is cached, return the cache locations
-    val cached = getCacheLocs(rdd)(partition)
+    val cached = getCacheLocs(rdd)(partition) // SSY if cached, just use schedule to cache location
     if (cached.nonEmpty) {
       return cached
     }
     // If the RDD has some placement preferences (as is the case for input RDDs), get those
+		// SSY also for checkpointRDD
     val rddPrefs = rdd.preferredLocations(rdd.partitions(partition)).toList
     if (rddPrefs.nonEmpty) {
       return rddPrefs.map(TaskLocation(_))
@@ -2230,7 +2247,7 @@ private[spark] class DAGScheduler(
       case _ =>
     }
 
-    Nil
+    Nil // SSY all parents are Nil
   }
 
   /** Mark a map stage job as finished with the given output stats, and report to its listener. */

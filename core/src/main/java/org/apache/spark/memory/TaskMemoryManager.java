@@ -135,6 +135,7 @@ public class TaskMemoryManager {
    *
    * @return number of bytes successfully granted (<= N).
    */
+	// SSY acquireExecutionMemory
   public long acquireExecutionMemory(long required, MemoryConsumer consumer) {
     assert(required >= 0);
     assert(consumer != null);
@@ -144,7 +145,7 @@ public class TaskMemoryManager {
     // off-heap memory. This is subject to change, though, so it may be risky to make this
     // optimization now in case we forget to undo it late when making changes.
     synchronized (this) {
-      long got = memoryManager.acquireExecutionMemory(required, taskAttemptId, mode);
+      long got = memoryManager.acquireExecutionMemory(required, taskAttemptId, mode); // SSY acquireExecutionMemory
 
       // Try to release memory from other consumers first, then we can reduce the frequency of
       // spilling, avoid to have too many spilled files.

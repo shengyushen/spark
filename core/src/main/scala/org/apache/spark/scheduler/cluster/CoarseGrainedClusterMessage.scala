@@ -41,6 +41,7 @@ private[spark] object CoarseGrainedClusterMessages {
   case object RetrieveLastAllocatedExecutorId extends CoarseGrainedClusterMessage
 
   // Driver to executors
+	// SSY HAHA, the connection from Dirver to executor
   case class LaunchTask(data: SerializableBuffer) extends CoarseGrainedClusterMessage
 
   case class KillTask(taskId: Long, executor: String, interruptThread: Boolean, reason: String)

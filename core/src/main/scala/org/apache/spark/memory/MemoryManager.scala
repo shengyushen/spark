@@ -82,7 +82,7 @@ private[spark] abstract class MemoryManager(
    * This must be set after construction due to initialization ordering constraints.
    */
   final def setMemoryStore(store: MemoryStore): Unit = synchronized {
-    onHeapStorageMemoryPool.setMemoryStore(store)
+    onHeapStorageMemoryPool.setMemoryStore(store) // SSY only storage memroy pool have memory store 
     offHeapStorageMemoryPool.setMemoryStore(store)
   }
 
@@ -114,7 +114,7 @@ private[spark] abstract class MemoryManager(
    * but an older task had a lot of memory already.
    */
   private[memory]
-  def acquireExecutionMemory(
+  def acquireExecutionMemory( // SSY spill
       numBytes: Long,
       taskAttemptId: Long,
       memoryMode: MemoryMode): Long

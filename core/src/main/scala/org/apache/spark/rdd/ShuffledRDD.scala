@@ -98,11 +98,15 @@ class ShuffledRDD[K: ClassTag, V: ClassTag, C: ClassTag](
     val dep = dependencies.head.asInstanceOf[ShuffleDependency[K, V, C]]
     tracker.getPreferredLocationsForShuffle(dep, partition.index)
   }
-
+	// SSY compute
   override def compute(split: Partition, context: TaskContext): Iterator[(K, C)] = {
     val dep = dependencies.head.asInstanceOf[ShuffleDependency[K, V, C]]
     val metrics = context.taskMetrics().createTempShuffleReadMetrics()
-    SparkEnv.get.shuffleManager.getReader(
+		// SSY getReader and then read
+		// for example ssy7 in core/src/main/scala/org/apache/spark/shuffle/sort/SortShuffleManager.scala
+		// also for intel ../Spark-PMoF/core/src/main/scala/org/apache/spark/shuffle/pmof/PmofShuffleManager.scala
+    SparkEnv.get.shuffleManager.getReader( // SSY BlockStoreShuffleReader
+			// SSY notice that split.index and index +1 is the start and end partition
       dep.shuffleHandle, split.index, split.index + 1, context, metrics)
       .read()
       .asInstanceOf[Iterator[(K, C)]]

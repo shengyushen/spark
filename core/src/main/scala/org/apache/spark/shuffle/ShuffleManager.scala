@@ -50,12 +50,14 @@ private[spark] trait ShuffleManager {
    *
    * Called on executors by reduce tasks.
    */
+	// SSY ssy5
   final def getReader[K, C](
       handle: ShuffleHandle,
       startPartition: Int,
       endPartition: Int,
       context: TaskContext,
       metrics: ShuffleReadMetricsReporter): ShuffleReader[K, C] = {
+		// SSY calling ssy7 below
     getReader(handle, 0, Int.MaxValue, startPartition, endPartition, context, metrics)
   }
 
@@ -67,6 +69,8 @@ private[spark] trait ShuffleManager {
    *
    * Called on executors by reduce tasks.
    */
+	// SSY ssy7
+	// but it is empty one overriden by SortShuffleManager
   def getReader[K, C](
       handle: ShuffleHandle,
       startMapIndex: Int,

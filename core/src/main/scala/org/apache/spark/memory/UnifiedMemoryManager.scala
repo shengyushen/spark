@@ -46,7 +46,7 @@ import org.apache.spark.storage.BlockId
  *                          it if necessary. Cached blocks can be evicted only if actual
  *                          storage memory usage exceeds this region.
  */
-private[spark] class UnifiedMemoryManager(
+private[spark] class UnifiedMemoryManager( // SSY this is the default one , but no actual memory here, which is in MemoryManager
     conf: SparkConf,
     val maxHeapMemory: Long,
     onHeapStorageRegionSize: Long,
@@ -57,7 +57,8 @@ private[spark] class UnifiedMemoryManager(
     onHeapStorageRegionSize,
     maxHeapMemory - onHeapStorageRegionSize) {
 
-  private def assertInvariants(): Unit = {
+  private def assertInvariants(): Unit = { 
+		// SSY these pools in core/src/main/scala/org/apache/spark/memory/MemoryManager.scala 
     assert(onHeapExecutionMemoryPool.poolSize + onHeapStorageMemoryPool.poolSize == maxHeapMemory)
     assert(
       offHeapExecutionMemoryPool.poolSize + offHeapStorageMemoryPool.poolSize == maxOffHeapMemory)
@@ -82,7 +83,7 @@ private[spark] class UnifiedMemoryManager(
    * active tasks) before it is forced to spill. This can happen if the number of tasks increase
    * but an older task had a lot of memory already.
    */
-  override private[memory] def acquireExecutionMemory(
+  override private[memory] def acquireExecutionMemory( // SSY spill
       numBytes: Long,
       taskAttemptId: Long,
       memoryMode: MemoryMode): Long = synchronized {
@@ -144,7 +145,7 @@ private[spark] class UnifiedMemoryManager(
       maxMemory - math.min(storagePool.memoryUsed, storageRegionSize)
     }
 
-    executionPool.acquireMemory(
+    executionPool.acquireMemory( // SSY acquireMemory of executionPool that need external allocator maybeGrowExecutionPool
       numBytes, taskAttemptId, maybeGrowExecutionPool, () => computeMaxExecutionPoolSize)
   }
 
@@ -178,18 +179,18 @@ private[spark] class UnifiedMemoryManager(
       executionPool.decrementPoolSize(memoryBorrowedFromExecution)
       storagePool.incrementPoolSize(memoryBorrowedFromExecution)
     }
-    storagePool.acquireMemory(blockId, numBytes)
+    storagePool.acquireMemory(blockId, numBytes) // SSY calling back to memoryStore evictBlocksToFreeSpace
   }
 
   override def acquireUnrollMemory(
       blockId: BlockId,
       numBytes: Long,
       memoryMode: MemoryMode): Boolean = synchronized {
-    acquireStorageMemory(blockId, numBytes, memoryMode)
+    acquireStorageMemory(blockId, numBytes, memoryMode) // SSY calling back to memoryStore evictBlocksToFreeSpace
   }
 }
 
-object UnifiedMemoryManager {
+object UnifiedMmoryManager {
 
   // Set aside a fixed amount of memory for non-storage, non-execution purposes.
   // This serves a function similar to `spark.memory.fraction`, but guarantees that we reserve

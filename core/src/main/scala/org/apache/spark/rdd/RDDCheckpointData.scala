@@ -37,6 +37,7 @@ private[spark] object CheckpointState extends Enumeration {
  * as well as, manages the post-checkpoint state by providing the updated partitions,
  * iterator and preferred locations of the checkpointed RDD.
  */
+// SSY this will automatically check point the rdd at new
 private[spark] abstract class RDDCheckpointData[T: ClassTag](@transient private val rdd: RDD[T])
   extends Serializable {
 
@@ -71,7 +72,9 @@ private[spark] abstract class RDDCheckpointData[T: ClassTag](@transient private 
         return
       }
     }
-
+		//SSY change to depend on the check pointed file
+		// but this is abstract function in this abstract class
+		// found in  core/src/main/scala/org/apache/spark/rdd/LocalRDDCheckpointData.scala
     val newRDD = doCheckpoint()
 
     // Update our state and truncate the RDD lineage

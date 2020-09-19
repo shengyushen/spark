@@ -125,7 +125,7 @@ private[spark] class MesosExecutorBackend
  * Entry point for Mesos executor.
  */
 private[spark] object MesosExecutorBackend extends Logging {
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit = { // SSY mesos back end
     Utils.initDaemon(log)
     // Create a new Executor and start it running
     val runner = new MesosExecutorBackend()

@@ -75,11 +75,14 @@ private[spark] object TaskLocation {
         val splits = hostAndExecutorId.split("_", 2)
         require(splits.length == 2, "Illegal executor location format: " + str)
         val Array(host, executorId) = splits
+				// SSY so many location type, this have both host and executorId
         new ExecutorCacheTaskLocation(host, executorId)
       } else {
+				// SSY host only
         new HostTaskLocation(str)
       }
     } else {
+			// SSY HDFS cache? may be the input RDD from hdfs 
       new HDFSCacheTaskLocation(hstr)
     }
   }

@@ -154,12 +154,13 @@ private[spark] object ClosureCleaner extends Logging {
    * @param closure the closure to clean
    * @param checkSerializable whether to verify that the closure is serializable after cleaning
    * @param cleanTransitively whether to clean enclosing closures transitively
-   */
+   */ 
+	// SSY clean3
   def clean(
       closure: AnyRef,
       checkSerializable: Boolean = true,
       cleanTransitively: Boolean = true): Unit = {
-    // SSY call the private clean below
+    // SSY call the private clean4 below
     clean(closure, checkSerializable, cleanTransitively, Map.empty)
   }
 
@@ -204,6 +205,7 @@ private[spark] object ClosureCleaner extends Logging {
    * @param accessedFields a map from a class to a set of its fields that are accessed by
    *                       the starting closure
    */
+	// SSY clean4
   private def clean(
       func: AnyRef,
       checkSerializable: Boolean,

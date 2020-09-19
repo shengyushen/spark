@@ -159,7 +159,7 @@ object SparkEnv extends Logging {
   /**
    * Create a SparkEnv for the driver.
    */
-  private[spark] def createDriverEnv(
+  private[spark] def createDriverEnv( // SSY called in core/src/main/scala/org/apache/spark/SparkContext.scala on driver side
       conf: SparkConf,
       isLocal: Boolean,
       listenerBus: LiveListenerBus,
@@ -176,6 +176,7 @@ object SparkEnv extends Logging {
     } else {
       None
     }
+		// SSY create SparkEnv for driver or executor
     create(
       conf,
       SparkContext.DRIVER_IDENTIFIER,
@@ -194,7 +195,7 @@ object SparkEnv extends Logging {
    * Create a SparkEnv for an executor.
    * In coarse-grained mode, the executor provides an RpcEnv that is already instantiated.
    */
-  private[spark] def createExecutorEnv(
+  private[spark] def createExecutorEnv( //SSY called in core/src/main/scala/org/apache/spark/executor/CoarseGrainedExecutorBackend.scala and  resource-managers/mesos/src/main/scala/org/apache/spark/executor/MesosExecutorBackend.scala
       conf: SparkConf,
       executorId: String,
       bindAddress: String,
@@ -230,7 +231,7 @@ object SparkEnv extends Logging {
   /**
    * Helper method to create a SparkEnv for a driver or an executor.
    */
-  private def create(
+  private def create( // SSY not called directly, user normally call createExecutorEnv and createDriverEnv
       conf: SparkConf,
       executorId: String,
       bindAddress: String,
@@ -271,6 +272,7 @@ object SparkEnv extends Logging {
     }
 
     // Create an instance of the class with the given name, possibly initializing it with our conf
+		// SSY java is so damn smart, 
     def instantiateClass[T](className: String): T = {
       val cls = Utils.classForName(className)
       // Look for a constructor taking a SparkConf and a boolean isDriver, then one taking just
@@ -329,15 +331,19 @@ object SparkEnv extends Logging {
         rpcEnv, mapOutputTracker.asInstanceOf[MapOutputTrackerMaster], conf))
 
     // Let the user specify short names for shuffle managers
+		// SSY user can specify mapping 
     val shortShuffleMgrNames = Map(
       "sort" -> classOf[org.apache.spark.shuffle.sort.SortShuffleManager].getName,
       "tungsten-sort" -> classOf[org.apache.spark.shuffle.sort.SortShuffleManager].getName)
+		// SSY real name in config file
     val shuffleMgrName = conf.get(config.SHUFFLE_MANAGER)
     val shuffleMgrClass =
+			// SSY getOrElse return value if found, or else invalid value
       shortShuffleMgrNames.getOrElse(shuffleMgrName.toLowerCase(Locale.ROOT), shuffleMgrName)
+		// SSY java is so damn smart, 
     val shuffleManager = instantiateClass[ShuffleManager](shuffleMgrClass)
 
-    val memoryManager: MemoryManager = UnifiedMemoryManager(conf, numUsableCores)
+    val memoryManager: MemoryManager = UnifiedMemoryManager(conf, numUsableCores) // SSY this can be access from driver side
 
     val blockManagerPort = if (isDriver) {
       conf.get(DRIVER_BLOCK_MANAGER_PORT)

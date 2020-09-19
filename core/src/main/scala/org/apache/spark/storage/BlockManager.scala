@@ -168,7 +168,7 @@ private[spark] class BlockManager(
     val master: BlockManagerMaster,
     val serializerManager: SerializerManager,
     val conf: SparkConf,
-    memoryManager: MemoryManager,
+    memoryManager: MemoryManager, // SSY memoryManager is not used directly, it is used inside memoryStore
     mapOutputTracker: MapOutputTracker,
     shuffleManager: ShuffleManager,
     val blockTransferService: BlockTransferService,
@@ -198,7 +198,7 @@ private[spark] class BlockManager(
     ThreadUtils.newDaemonCachedThreadPool("block-manager-future", 128))
 
   // Actual storage of where blocks are kept
-  private[spark] val memoryStore =
+  private[spark] val memoryStore = // memoryManager (actually UnifiedMemoryManager) is used in memoryStore 
     new MemoryStore(conf, blockInfoManager, serializerManager, memoryManager, this)
   private[spark] val diskStore = new DiskStore(conf, diskBlockManager, securityManager)
   memoryManager.setMemoryStore(memoryStore)
@@ -802,19 +802,19 @@ private[spark] class BlockManager(
    */
   def getLocalValues(blockId: BlockId): Option[BlockResult] = {
     logDebug(s"Getting local block $blockId")
-    blockInfoManager.lockForReading(blockId) match {
+    blockInfoManager.lockForReading(blockId) match { // SSY blockInfoManager only store the block info, such as level and serialized or not
       case None =>
         logDebug(s"Block $blockId was not found")
         None
-      case Some(info) =>
+      case Some(info) => // SSY it is store some where, memory or disk
         val level = info.level
         logDebug(s"Level for block $blockId is $level")
         val taskContext = Option(TaskContext.get())
-        if (level.useMemory && memoryStore.contains(blockId)) {
-          val iter: Iterator[Any] = if (level.deserialized) {
-            memoryStore.getValues(blockId).get
+        if (level.useMemory && memoryStore.contains(blockId)) { // SSY in memory
+          val iter: Iterator[Any] = if (level.deserialized) { // SSY not serialized
+            memoryStore.getValues(blockId).get // SSY haha it is in memoryStore, not memory manager
           } else {
-            serializerManager.dataDeserializeStream(
+            serializerManager.dataDeserializeStream( // SSY deserializing from memory
               blockId, memoryStore.getBytes(blockId).get.toInputStream())(info.classTag)
           }
           // We need to capture the current taskId in case the iterator completion is triggered
@@ -1115,8 +1115,9 @@ private[spark] class BlockManager(
    * This acquires a read lock on the block if the block was stored locally and does not acquire
    * any locks if the block was fetched from a remote block manager. The read lock will
    * automatically be freed once the result's `data` iterator is fully consumed.
-   */
-  def get[T: ClassTag](blockId: BlockId): Option[BlockResult] = {
+   */ 
+	// SSY def_get
+  def get[T: ClassTag](blockId: BlockId): Option[BlockResult] = { // SSY get directly?
     val local = getLocalValues(blockId)
     if (local.isDefined) {
       logInfo(s"Found block $blockId locally")
@@ -1177,17 +1178,17 @@ private[spark] class BlockManager(
    * @return either a BlockResult if the block was successfully cached, or an iterator if the block
    *         could not be cached.
    */
-  def getOrElseUpdate[T](
+  def getOrElseUpdate[T]( // SSY called from core/src/main/scala/org/apache/spark/rdd/RDD.scala
       blockId: BlockId,
       level: StorageLevel,
       classTag: ClassTag[T],
-      makeIterator: () => Iterator[T]): Either[BlockResult, Iterator[T]] = {
+      makeIterator: () => Iterator[T]): Either[BlockResult, Iterator[T]] = { //SSY makeIterator will be called here
     // Attempt to read the block from local or remote storage. If it's present, then we don't need
     // to go through the local-get-or-put path.
-    get[T](blockId)(classTag) match {
+    get[T](blockId)(classTag) match { // SSY defined above to get a block from local or remote def_get
       case Some(block) =>
         return Left(block)
-      case _ =>
+      case _ => // SSY result not found
         // Need to compute the block.
     }
     // Initially we hold no locks on this block.
@@ -1303,7 +1304,7 @@ private[spark] class BlockManager(
     val startTimeNs = System.nanoTime()
     var exceptionWasThrown: Boolean = true
     val result: Option[T] = try {
-      val res = putBody(putBlockInfo)
+      val res = putBody(putBlockInfo) //SSY calling putBody passed function
       exceptionWasThrown = false
       if (res.isEmpty) {
         // the block was successfully stored
@@ -1362,20 +1363,21 @@ private[spark] class BlockManager(
    */
   private def doPutIterator[T](
       blockId: BlockId,
-      iterator: () => Iterator[T],
+      iterator: () => Iterator[T], // SSY func to compute Iterator
       level: StorageLevel,
       classTag: ClassTag[T],
       tellMaster: Boolean = true,
       keepReadLock: Boolean = false): Option[PartiallyUnrolledIterator[T]] = {
-    doPut(blockId, level, classTag, tellMaster = tellMaster, keepReadLock = keepReadLock) { info =>
+    doPut(blockId, level, classTag, tellMaster = tellMaster, keepReadLock = keepReadLock) { info => // SSY this putBody is just used in doPut
       val startTimeNs = System.nanoTime()
       var iteratorFromFailedMemoryStorePut: Option[PartiallyUnrolledIterator[T]] = None
       // Size of the block in bytes
       var size = 0L
-      if (level.useMemory) {
+      if (level.useMemory) { //SSY using memory
         // Put it in memory first, even if it also has useDisk set to true;
         // We will drop it to disk later if the memory store can't hold it.
         if (level.deserialized) {
+					// SSY compute this iterator value now, and pass value to memoryStore
           memoryStore.putIteratorAsValues(blockId, iterator(), classTag) match {
             case Right(s) =>
               size = s
@@ -1462,7 +1464,7 @@ private[spark] class BlockManager(
    *         automatically be disposed and the caller should not continue to use them. Otherwise,
    *         if this returns None then the original disk store bytes will be unaffected.
    */
-  private def maybeCacheDiskBytesInMemory(
+  private def maybeCacheDiskBytesInMemory( // SSY spill
       blockInfo: BlockInfo,
       blockId: BlockId,
       level: StorageLevel,
@@ -1507,7 +1509,7 @@ private[spark] class BlockManager(
    * @return a copy of the iterator. The original iterator passed this method should no longer
    *         be used after this method returns.
    */
-  private def maybeCacheDiskValuesInMemory[T](
+  private def maybeCacheDiskValuesInMemory[T]( // SSY spill
       blockInfo: BlockInfo,
       blockId: BlockId,
       level: StorageLevel,

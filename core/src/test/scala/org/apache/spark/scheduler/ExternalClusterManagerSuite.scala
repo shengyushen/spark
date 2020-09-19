@@ -65,7 +65,7 @@ private class DummyExternalClusterManager extends ExternalClusterManager {
   }
 
 }
-
+// SSY empty reviveOffers
 private class DummySchedulerBackend extends SchedulerBackend {
   var initialized = false
   def start(): Unit = {}

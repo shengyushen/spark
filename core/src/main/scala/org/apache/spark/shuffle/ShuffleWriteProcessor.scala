@@ -41,8 +41,10 @@ private[spark] class ShuffleWriteProcessor extends Serializable with Logging {
    * get from [[ShuffleManager]] and triggers rdd compute, finally return the [[MapStatus]] for
    * this task.
    */
+	// SSY called from core/src/main/scala/org/apache/spark/scheduler/ShuffleMapTask.scala 
+	// only for a particular partition
   def write(
-      rdd: RDD[_],
+      rdd: RDD[_], // SSY computing of rdd will be triggered ../spark/core/src/main/scala/org/apache/spark/rdd/RDD.scala 
       dep: ShuffleDependency[_, _, _],
       mapId: Long,
       context: TaskContext,
@@ -50,12 +52,14 @@ private[spark] class ShuffleWriteProcessor extends Serializable with Logging {
     var writer: ShuffleWriter[Any, Any] = null
     try {
       val manager = SparkEnv.get.shuffleManager
+			// SSY SortShuffleManager full defined core/src/main/scala/org/apache/spark/shuffle/sort/SortShuffleManager.scala
+			// only getReader  no getWriter core/src/main/scala/org/apache/spark/shuffle/ShuffleManager.scala
       writer = manager.getWriter[Any, Any](
-        dep.shuffleHandle,
+        dep.shuffleHandle, // SSY only type, not real class or function
         mapId,
         context,
         createMetricsReporter(context))
-      writer.write(
+      writer.write(// SSY haha triggering rdd iterator and then compute in core/src/main/scala/org/apache/spark/rdd/RDD.scala 
         rdd.iterator(partition, context).asInstanceOf[Iterator[_ <: Product2[Any, Any]]])
       writer.stop(success = true).get
     } catch {

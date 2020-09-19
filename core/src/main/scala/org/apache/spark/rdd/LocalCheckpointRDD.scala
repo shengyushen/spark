@@ -39,7 +39,7 @@ private[spark] class LocalCheckpointRDD[T: ClassTag](
     rddId: Int,
     numPartitions: Int)
   extends CheckpointRDD[T](sc) {
-
+	//SSY this convert the calling of rdd to above standard calling method
   def this(rdd: RDD[T]) {
     this(rdd.context, rdd.id, rdd.partitions.length)
   }

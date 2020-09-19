@@ -41,7 +41,7 @@ private[spark] trait SchedulableBuilder {
 
   def addTaskSetManager(manager: Schedulable, properties: Properties): Unit
 }
-
+// SSY fifo scheduler
 private[spark] class FIFOSchedulableBuilder(val rootPool: Pool)
   extends SchedulableBuilder with Logging {
 
@@ -179,7 +179,7 @@ private[spark] class FairSchedulableBuilder(val rootPool: Pool, conf: SparkConf)
         defaultValue
     }
   }
-
+	// SSY FairSchedulableBuilder
   override def addTaskSetManager(manager: Schedulable, properties: Properties): Unit = {
     val poolName = if (properties != null) {
         properties.getProperty(FAIR_SCHEDULER_PROPERTIES, DEFAULT_POOL_NAME)

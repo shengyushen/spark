@@ -123,6 +123,7 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
    *
    * Called on executors by reduce tasks.
    */
+	// SSY real ssy7
   override def getReader[K, C](
       handle: ShuffleHandle,
       startMapIndex: Int,
@@ -133,6 +134,7 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
       metrics: ShuffleReadMetricsReporter): ShuffleReader[K, C] = {
     val blocksByAddress = SparkEnv.get.mapOutputTracker.getMapSizesByExecutorId(
       handle.shuffleId, startMapIndex, endMapIndex, startPartition, endPartition)
+		// SSY the reader
     new BlockStoreShuffleReader(
       handle.asInstanceOf[BaseShuffleHandle[K, _, C]], blocksByAddress, context, metrics,
       shouldBatchFetch = canUseBatchFetch(startPartition, endPartition, context))
@@ -168,6 +170,7 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
           metrics,
           shuffleExecutorComponents)
       case other: BaseShuffleHandle[K @unchecked, V @unchecked, _] =>
+				// SSY core/src/main/scala/org/apache/spark/shuffle/sort/SortShuffleWriter.scala
         new SortShuffleWriter(
           shuffleBlockResolver, other, mapId, context, shuffleExecutorComponents)
     }

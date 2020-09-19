@@ -62,11 +62,13 @@ object Partitioner {
    *
    * We use two method parameters (rdd, others) to enforce callers passing at least 1 RDD.
    */
+	// SSY others is actually a seq of RDD
   def defaultPartitioner(rdd: RDD[_], others: RDD[_]*): Partitioner = {
-    val rdds = (Seq(rdd) ++ others)
+    val rdds = (Seq(rdd) ++ others) // SSY rdds is actual a seq of string, so I can run filter on it
     val hasPartitioner = rdds.filter(_.partitioner.exists(_.numPartitions > 0))
 
     val hasMaxPartitioner: Option[RDD[_]] = if (hasPartitioner.nonEmpty) {
+			// SSY partitions is in ../spark/core/src/main/scala/org/apache/spark/rdd/RDD.scala
       Some(hasPartitioner.maxBy(_.partitions.length))
     } else {
       None
@@ -82,6 +84,7 @@ object Partitioner {
     // than or equal to the default number of partitions, use the existing partitioner.
     if (hasMaxPartitioner.nonEmpty && (isEligiblePartitioner(hasMaxPartitioner.get, rdds) ||
         defaultNumPartitions <= hasMaxPartitioner.get.getNumPartitions)) {
+			// SSY hasMaxPartitioner is of Some type, so get return the RDD, and then partitioner of RDD call another get to get the current Partitioner
       hasMaxPartitioner.get.partitioner.get
     } else {
       new HashPartitioner(defaultNumPartitions)

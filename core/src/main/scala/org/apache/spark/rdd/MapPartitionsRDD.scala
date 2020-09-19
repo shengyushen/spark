@@ -51,8 +51,10 @@ private[spark] class MapPartitionsRDD[U: ClassTag, T: ClassTag](
   // SSY real compute function that may called by downstream
   // SSY notice that firstParent is invodked
 	// SSY firstParent is defined in core/src/main/scala/org/apache/spark/rdd/RDD.scala
-  override def compute(split: Partition, context: TaskContext): Iterator[U] =
-    f(context, split.index, firstParent[T].iterator(split, context))
+  override def compute(split: Partition, context: TaskContext): Iterator[U] = // SSY split is the partition to be used 
+		// SSY f in actually defined in creating graph
+    f(context, split.index, firstParent[T].iterator(split, context)) // SSY  ./core/src/main/scala/org/apache/spark/shuffle/ShuffleWriteProcessor.scala write function will trigger recursively all compute
+		// SSY so this run on executor
 
   override def clearDependencies(): Unit = {
     super.clearDependencies()

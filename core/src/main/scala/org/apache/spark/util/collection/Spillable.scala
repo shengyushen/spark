@@ -26,7 +26,7 @@ import org.apache.spark.memory.{MemoryConsumer, MemoryMode, TaskMemoryManager}
  * Spills contents of an in-memory collection to disk when the memory threshold
  * has been exceeded.
  */
-private[spark] abstract class Spillable[C](taskMemoryManager: TaskMemoryManager)
+private[spark] abstract class Spillable[C](taskMemoryManager: TaskMemoryManager) // SSY spill
   extends MemoryConsumer(taskMemoryManager) with Logging {
   /**
    * Spills the current in-memory collection to disk, and releases the memory.

@@ -37,7 +37,7 @@ import org.apache.spark.scheduler.SchedulingMode.SchedulingMode
 import org.apache.spark.scheduler.TaskLocality.TaskLocality
 import org.apache.spark.storage.BlockManagerId
 import org.apache.spark.util.{AccumulatorV2, Clock, SystemClock, ThreadUtils, Utils}
-
+// SSY each backend correspond to mesos, yarn and so on
 /**
  * Schedules tasks for multiple types of clusters by acting through a SchedulerBackend.
  * It can also work with a local setup by using a `LocalSchedulerBackend` and setting
@@ -226,7 +226,7 @@ private[spark] class TaskSchedulerImpl(
   override def postStartHook(): Unit = {
     waitBackendReady()
   }
-
+	// SSY called from ../spark/core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala 
   override def submitTasks(taskSet: TaskSet): Unit = {
     val tasks = taskSet.tasks
     logInfo("Adding task set " + taskSet.id + " with " + tasks.length + " tasks "
@@ -255,11 +255,12 @@ private[spark] class TaskSchedulerImpl(
       if (!isLocal && !hasReceivedTask) {
         starvationTimer.scheduleAtFixedRate(new TimerTask() {
           override def run(): Unit = {
+						// SSY will be filled in by resourceOffers below
             if (!hasLaunchedTask) {
               logWarning("Initial job has not accepted any resources; " +
                 "check your cluster UI to ensure that workers are registered " +
                 "and have sufficient resources")
-            } else {
+            } else { // SSY if this task have launched then close this run function
               this.cancel()
             }
           }
@@ -267,6 +268,13 @@ private[spark] class TaskSchedulerImpl(
       }
       hasReceivedTask = true
     }
+		// SSY not defined ../spark/core/src/main/scala/org/apache/spark/scheduler/SchedulerBackend.scala
+		// empty in core/src/test/scala/org/apache/spark/scheduler/ExternalClusterManagerSuite.scala
+		// empty in core/src/test/scala/org/apache/spark/scheduler/TaskSchedulerImplSuite.scala
+		// core/src/main/scala/org/apache/spark/scheduler/local/LocalSchedulerBackend.scala
+		// core/src/main/scala/org/apache/spark/scheduler/cluster/CoarseGrainedSchedulerBackend.scala
+		// resource-managers/mesos/src/main/scala/org/apache/spark/scheduler/cluster/mesos/MesosFineGrainedSchedulerBackend.scala
+		// SSY CoarseGrainedSchedulerBackend
     backend.reviveOffers()
   }
 

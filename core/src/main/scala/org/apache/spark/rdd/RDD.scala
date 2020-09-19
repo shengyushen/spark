@@ -211,7 +211,7 @@ abstract class RDD[T: ClassTag](
   /**
    * Persist this RDD with the default storage level (`MEMORY_ONLY`).
    */
-  def cache(): this.type = persist()
+  def cache(): this.type = persist() // SSY cache is the same as persist
 
   /**
    * Mark the RDD as non-persistent, and remove all blocks for it from memory and disk.
@@ -337,6 +337,7 @@ abstract class RDD[T: ClassTag](
    * This should ''not'' be called by users directly, but is available for implementors of custom
    * subclasses of RDD.
    */
+	// SSY iterator call compute to generate current Partition, either recompute or get from checkpoint
   final def iterator(split: Partition, context: TaskContext): Iterator[T] = {
     if (storageLevel != StorageLevel.NONE) {
       getOrCompute(split, context)
@@ -374,7 +375,7 @@ abstract class RDD[T: ClassTag](
    */
   private[spark] def computeOrReadCheckpoint(split: Partition, context: TaskContext): Iterator[T] =
   {
-    if (isCheckpointedAndMaterialized) {
+    if (isCheckpointedAndMaterialized) { // SSY hoho, iteratively compute it reversively, and see? it compute a partition by its own, instead of a whole RDD
       firstParent[T].iterator(split, context)
     } else {
       compute(split, context)
@@ -385,12 +386,14 @@ abstract class RDD[T: ClassTag](
    * Gets or computes an RDD partition. Used by RDD.iterator() when an RDD is cached.
    */
   private[spark] def getOrCompute(partition: Partition, context: TaskContext): Iterator[T] = {
-    val blockId = RDDBlockId(id, partition.index)
+    val blockId = RDDBlockId(id, partition.index) // SSY id is a unique id generated, this function just generate a string such as rdd_<rddid>_<splitIndex>
     var readCachedBlock = true
     // This method is called on executors, so we need call SparkEnv.get instead of sc.env.
-    SparkEnv.get.blockManager.getOrElseUpdate(blockId, storageLevel, elementClassTag, () => {
+		// SSY HAHA, this will be packed and run on executors, we do NOT have sc, but only sparkenv
+		// what is important that it call blockManager instead of memoryManager
+    SparkEnv.get.blockManager.getOrElseUpdate(blockId, storageLevel, elementClassTag, () => { // SSY allocating memory
       readCachedBlock = false
-      computeOrReadCheckpoint(partition, context)
+      computeOrReadCheckpoint(partition, context) // SSY passing the function to compute partition to getOrElseUpdate
     }) match {
       // Block hit.
       case Left(blockResult) =>
@@ -426,9 +429,9 @@ abstract class RDD[T: ClassTag](
    * Return a new RDD by applying a function to all elements of this RDD.
    */
   def map[U: ClassTag](f: T => U): RDD[U] = withScope {
-    val cleanF = sc.clean(f)
+    val cleanF = sc.clean(f) // SSY clean is defined in sparkContext
 		// SSY only create a graph, not compute immediately
-    new MapPartitionsRDD[U, T](this, (_, _, iter) => iter.map(cleanF))
+    new MapPartitionsRDD[U, T](this, (_, _, iter) => iter.map(cleanF)) // SSY this function do NOT need TaskContext and partition index, that is to say, it do all the same job for all partition
   }
 
   /**
@@ -1588,7 +1591,7 @@ abstract class RDD[T: ClassTag](
    */
   def saveAsTextFile(path: String, codec: Class[_ <: CompressionCodec]): Unit = withScope { // SSY withScope is just a function defined above used to wrap all rdd within a scope for visualization
     this.mapPartitions { iter => // SSY defined above
-      val text = new Text()
+      val text = new Text() // SSY Text is just a unicode variant of String
       iter.map { x =>
         require(x != null, "text files do not allow null rows")
         text.set(x.toString)
@@ -1626,6 +1629,7 @@ abstract class RDD[T: ClassTag](
    * executed on this RDD. It is strongly recommended that this RDD is persisted in
    * memory, otherwise saving it on a file will require recomputation.
    */
+	// SSY god always recomputing
   def checkpoint(): Unit = RDDCheckpointData.synchronized {
     // NOTE: we use a global lock here due to complexities downstream with ensuring
     // children RDD partitions point to the correct parent partitions. In the future
@@ -1634,7 +1638,7 @@ abstract class RDD[T: ClassTag](
       throw new SparkException("Checkpoint directory has not been set in the SparkContext")
     } else if (checkpointData.isEmpty) {
 			// SSY this will saved into checkpointData and remove all parent dependencies
-      checkpointData = Some(new ReliableRDDCheckpointData(this))
+      checkpointData = Some(new ReliableRDDCheckpointData(this)) // SSY passing this into new ReliableRDDCheckpointData
     }
   }
 
@@ -1656,6 +1660,7 @@ abstract class RDD[T: ClassTag](
    *
    * The checkpoint directory set through `SparkContext#setCheckpointDir` is not used.
    */
+	 // SSY local checkpoint to cache, instead of to persist storage
   def localCheckpoint(): this.type = RDDCheckpointData.synchronized {
     if (conf.get(DYN_ALLOCATION_ENABLED) &&
         conf.contains(DYN_ALLOCATION_CACHED_EXECUTOR_IDLE_TIMEOUT)) {
@@ -1675,6 +1680,7 @@ abstract class RDD[T: ClassTag](
     // (i.e. uses disk) to guarantee correctness.
 
     if (storageLevel == StorageLevel.NONE) {
+			// SSY hha persist here accoridng to specified level
       persist(LocalRDDCheckpointData.DEFAULT_STORAGE_LEVEL)
     } else {
       persist(LocalRDDCheckpointData.transformStorageLevel(storageLevel), allowOverride = true)
@@ -1694,7 +1700,7 @@ abstract class RDD[T: ClassTag](
           "RDD was already marked for reliable checkpointing: overriding with local checkpoint.")
         case _ =>
       }
-      checkpointData = Some(new LocalRDDCheckpointData(this))
+      checkpointData = Some(new LocalRDDCheckpointData(this)) // SSY haha local checkpointed with this content passed into 
     }
     this
   }
@@ -1821,7 +1827,7 @@ abstract class RDD[T: ClassTag](
   // Other internal methods and fields
   // =======================================================================
 
-  private var storageLevel: StorageLevel = StorageLevel.NONE
+  private var storageLevel: StorageLevel = StorageLevel.NONE // SSY where to store
   @transient private var resourceProfile: Option[ResourceProfile] = None
 
   /** User code that created this RDD (e.g. `textFile`, `parallelize`). */

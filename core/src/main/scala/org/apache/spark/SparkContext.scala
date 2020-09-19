@@ -447,6 +447,7 @@ class SparkContext(config: SparkConf) extends Logging {
     listenerBus.addToStatusQueue(_statusStore.listener.get)
 
     // Create the Spark execution environment (cache, map output tracker, etc)
+		// SSY including all sorts of managers
     _env = createSparkEnv(_conf, isLocal, listenerBus)
     SparkEnv.set(_env)
 
@@ -888,10 +889,10 @@ class SparkContext(config: SparkConf) extends Logging {
    */
   def textFile(
       path: String,
-      minPartitions: Int = defaultMinPartitions): RDD[String] = withScope {
+      minPartitions: Int = defaultMinPartitions): RDD[String] = withScope { // SSY notice this defaultMinPartitions
     assertNotStopped()
-    hadoopFile(path, classOf[TextInputFormat], classOf[LongWritable], classOf[Text],
-      minPartitions).map(pair => pair._2.toString).setName(path)
+    hadoopFile(path, classOf[TextInputFormat], classOf[LongWritable], classOf[Text],// SSY calling hadoopFile5
+      minPartitions).map(pair => pair._2.toString).setName(path) // SSY notice this map transformation
   }
 
   /**
@@ -1083,6 +1084,7 @@ class SparkContext(config: SparkConf) extends Logging {
    * @param minPartitions suggested minimum number of partitions for the resulting RDD
    * @return RDD of tuples of key and corresponding value
    */
+	// SSY hadoopFile5
   def hadoopFile[K, V](
       path: String,
       inputFormatClass: Class[_ <: InputFormat[K, V]],
@@ -1481,11 +1483,12 @@ class SparkContext(config: SparkConf) extends Logging {
     assertNotStopped()
     require(!classOf[RDD[_]].isAssignableFrom(classTag[T].runtimeClass),
       "Can not directly broadcast RDDs; instead, call collect() and broadcast the result.")
+		// SSY core/src/main/scala/org/apache/spark/broadcast/BroadcastManager.scala
     val bc = env.broadcastManager.newBroadcast[T](value, isLocal)
     val callSite = getCallSite
     logInfo("Created broadcast " + bc.id + " from " + callSite.shortForm)
     cleaner.foreach(_.registerBroadcastForCleanup(bc))
-    bc
+    bc // SSY only create and return this bc
   }
 
   /**
@@ -2097,6 +2100,9 @@ class SparkContext(config: SparkConf) extends Logging {
    * @param resultHandler callback to pass each result to
    */
 	// SSY the real runJob4 called by all other runJob
+	// calling from ../spark/core/src/main/scala/org/apache/spark/rdd/RDD.scala
+	// and  ../HiBench/sparkbench/micro/src/main/scala/com/intel/sparkbench/micro/ScalaWordCount.scala
+	// according to them runJob with rdd as its source/parent rdd
   def runJob[T, U: ClassTag](
       rdd: RDD[T],
       func: (TaskContext, Iterator[T]) => U,
@@ -2114,9 +2120,10 @@ class SparkContext(config: SparkConf) extends Logging {
 		// SSY all call dagScheduler of type  DAGScheduler
 		// ../spark/core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala
     dagScheduler.runJob(rdd, cleanedFunc, partitions, callSite, resultHandler, localProperties.get)
+		// SSY wait for all finished
 		// SSY ../spark/core/src/main/scala/org/apache/spark/ui/ConsoleProgressBar.scala
     progressBar.foreach(_.finishAll()) 
-    rdd.doCheckpoint() // SSY save dog life
+    rdd.doCheckpoint() // SSY I have already finished using this rdd, why checkpoint it?
   }
 
   /**
@@ -2169,9 +2176,11 @@ class SparkContext(config: SparkConf) extends Logging {
    * a result from one partition)
    */
 	// SSY runJob2
+	// called in core/src/main/scala/org/apache/spark/internal/io/SparkHadoopWriter.scala 
+	// use direct 0 to N partition
   def runJob[T, U: ClassTag](rdd: RDD[T], func: (TaskContext, Iterator[T]) => U): Array[U] = {
 		// SSY by default use full partition runJob3
-    runJob(rdd, func, 0 until rdd.partitions.length)
+    runJob(rdd, func, 0 until rdd.partitions.length) // SSY extend to all RDD partitions
   }
 
   /**
@@ -2425,7 +2434,7 @@ class SparkContext(config: SparkConf) extends Logging {
    * Notice that we use math.min so the "defaultMinPartitions" cannot be higher than 2.
    * The reasons for this are discussed in https://github.com/mesos/spark/pull/718
    */
-  def defaultMinPartitions: Int = math.min(defaultParallelism, 2)
+  def defaultMinPartitions: Int = math.min(defaultParallelism, 2) // SSY just the default but why smaller than 2 ? OK it is used only when user not specified 
 
   private val nextShuffleId = new AtomicInteger(0)
 

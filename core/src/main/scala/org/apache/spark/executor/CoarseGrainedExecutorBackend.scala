@@ -153,14 +153,15 @@ private[spark] class CoarseGrainedExecutorBackend(
     case RegisteredExecutor =>
       logInfo("Successfully registered with driver")
       try {
-        executor = new Executor(executorId, hostname, env, userClassPath, isLocal = false,
+        executor = new Executor(executorId, hostname, env, userClassPath, isLocal = false, // SSY passing the env into Executor
           resources = _resources)
         driver.get.send(LaunchedExecutor(executorId))
       } catch {
         case NonFatal(e) =>
           exitExecutor(1, "Unable to create executor due to " + e.getMessage, e)
       }
-
+		// SSY Executor receive this msg
+		// from core/src/main/scala/org/apache/spark/scheduler/cluster/CoarseGrainedSchedulerBackend.scala 
     case LaunchTask(data) =>
       if (executor == null) {
         exitExecutor(1, "Received LaunchTask command but executor was null")
@@ -175,10 +176,10 @@ private[spark] class CoarseGrainedExecutorBackend(
               logError("No registered driver to send Decommission to.")
           }
         }
-        val taskDesc = TaskDescription.decode(data.value)
+        val taskDesc = TaskDescription.decode(data.value) // SSY core/src/main/scala/org/apache/spark/util/SerializableBuffer.scala  from core/src/main/scala/org/apache/spark/scheduler/cluster/CoarseGrainedSchedulerBackend.scala 
         logInfo("Got assigned task " + taskDesc.taskId)
         taskResources(taskDesc.taskId) = taskDesc.resources
-        executor.launchTask(this, taskDesc)
+        executor.launchTask(this, taskDesc) // SSY core/src/main/scala/org/apache/spark/executor/Executor.scala 
       }
 
     case KillTask(taskId, _, interruptThread, reason) =>
@@ -300,7 +301,7 @@ private[spark] object CoarseGrainedExecutorBackend extends Logging {
       resourcesFileOpt: Option[String],
       resourceProfileId: Int)
 
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit = { // SSY executor side main entry point
     val createFn: (RpcEnv, Arguments, SparkEnv, ResourceProfile) =>
       CoarseGrainedExecutorBackend = { case (rpcEnv, arguments, env, resourceProfile) =>
       new CoarseGrainedExecutorBackend(rpcEnv, arguments.driverUrl, arguments.executorId,
@@ -366,11 +367,11 @@ private[spark] object CoarseGrainedExecutorBackend extends Logging {
       }
 
       driverConf.set(EXECUTOR_ID, arguments.executorId)
-      val env = SparkEnv.createExecutorEnv(driverConf, arguments.executorId, arguments.bindAddress,
+      val env = SparkEnv.createExecutorEnv(driverConf, arguments.executorId, arguments.bindAddress, // SSY createExecutorEnv containing memoryManager
         arguments.hostname, arguments.cores, cfg.ioEncryptionKey, isLocal = false)
 
       env.rpcEnv.setupEndpoint("Executor",
-        backendCreateFn(env.rpcEnv, arguments, env, cfg.resourceProfile))
+        backendCreateFn(env.rpcEnv, arguments, env, cfg.resourceProfile)) // SSY pass env into beckend
       arguments.workerUrl.foreach { url =>
         env.rpcEnv.setupEndpoint("WorkerWatcher", new WorkerWatcher(env.rpcEnv, url))
       }

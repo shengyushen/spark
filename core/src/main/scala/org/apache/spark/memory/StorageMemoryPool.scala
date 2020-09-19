@@ -31,9 +31,9 @@ import org.apache.spark.storage.memory.MemoryStore
  * @param memoryMode the type of memory tracked by this pool (on- or off-heap)
  */
 private[memory] class StorageMemoryPool(
-    lock: Object,
+    lock: Object, // SSY just UnifiedMemoryManager
     memoryMode: MemoryMode
-  ) extends MemoryPool(lock) with Logging {
+  ) extends MemoryPool(lock) with Logging { //SSY ./core/src/main/scala/org/apache/spark/memory/MemoryPool.scala
 
   private[this] val poolName: String = memoryMode match {
     case MemoryMode.ON_HEAP => "on-heap storage"
@@ -59,7 +59,7 @@ private[memory] class StorageMemoryPool(
    * Set the [[MemoryStore]] used by this manager to evict cached blocks.
    * This must be set after construction due to initialization ordering constraints.
    */
-  final def setMemoryStore(store: MemoryStore): Unit = {
+  final def setMemoryStore(store: MemoryStore): Unit = { // SSY set memory store from outside to be shared
     _memoryStore = store
   }
 
@@ -89,7 +89,7 @@ private[memory] class StorageMemoryPool(
     assert(numBytesToFree >= 0)
     assert(memoryUsed <= poolSize)
     if (numBytesToFree > 0) {
-      memoryStore.evictBlocksToFreeSpace(Some(blockId), numBytesToFree, memoryMode)
+      memoryStore.evictBlocksToFreeSpace(Some(blockId), numBytesToFree, memoryMode) // SSY it have outside memoryStore, we can direct call it
     }
     // NOTE: If the memory store evicts blocks, then those evictions will synchronously call
     // back into this StorageMemoryPool in order to free memory. Therefore, these variables

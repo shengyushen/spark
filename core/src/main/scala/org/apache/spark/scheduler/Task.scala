@@ -78,6 +78,7 @@ private[spark] abstract class Task[T](
    * @param resources other host resources (like gpus) that this task attempt can access
    * @return the result of the task along with updates of Accumulators.
    */
+	// SSY call from core/src/main/scala/org/apache/spark/executor/Executor.scala 
   final def run(
       taskAttemptId: Long,
       attemptNumber: Int,
@@ -92,7 +93,7 @@ private[spark] abstract class Task[T](
       partitionId,
       taskAttemptId,
       attemptNumber,
-      taskMemoryManager,
+      taskMemoryManager, // SSY pass on taskMemoryManager
       localProperties,
       metricsSystem,
       metrics,
@@ -105,7 +106,7 @@ private[spark] abstract class Task[T](
     }
 
     InputFileBlockHolder.initialize()
-    TaskContext.setTaskContext(context)
+    TaskContext.setTaskContext(context) // SSY passing in TaskContextImpl
     taskThread = Thread.currentThread()
 
     if (_reasonIfKilled != null) {
@@ -124,6 +125,9 @@ private[spark] abstract class Task[T](
       Option(attemptNumber)).setCurrentContext()
 
     try {
+			// SSY runTask is empty here, but defined below
+			// core/src/main/scala/org/apache/spark/scheduler/ResultTask.scala
+			// core/src/main/scala/org/apache/spark/scheduler/ShuffleMapTask.scala
       runTask(context)
     } catch {
       case e: Throwable =>

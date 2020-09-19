@@ -18,7 +18,7 @@
 package org.apache.spark.storage.memory
 
 import java.io.OutputStream
-import java.nio.ByteBuffer
+import java.nio.ByteBuffer // SSY seems malloc
 import java.util.LinkedHashMap
 
 import scala.collection.mutable
@@ -33,7 +33,7 @@ import org.apache.spark.internal.config.{STORAGE_UNROLL_MEMORY_THRESHOLD, UNROLL
 import org.apache.spark.memory.{MemoryManager, MemoryMode}
 import org.apache.spark.serializer.{SerializationStream, SerializerManager}
 import org.apache.spark.storage._
-import org.apache.spark.unsafe.Platform
+import org.apache.spark.unsafe.Platform // SSY the place to alloc off heap memory
 import org.apache.spark.unsafe.array.ByteArrayMethods
 import org.apache.spark.util.{SizeEstimator, Utils}
 import org.apache.spark.util.collection.SizeTrackingVector
@@ -82,13 +82,13 @@ private[spark] class MemoryStore(
     conf: SparkConf,
     blockInfoManager: BlockInfoManager,
     serializerManager: SerializerManager,
-    memoryManager: MemoryManager,
+    memoryManager: MemoryManager, // SSY MemoryStore already a child of memoryManager, I refer it here only for notifying
     blockEvictionHandler: BlockEvictionHandler)
   extends Logging {
 
   // Note: all changes to memory allocations, notably putting blocks, evicting blocks, and
   // acquiring or releasing unroll memory, must be synchronized on `memoryManager`!
-
+	//SSY the exact KV store to store all data
   private val entries = new LinkedHashMap[BlockId, MemoryEntry[_]](32, 0.75f, true)
 
   // A mapping from taskAttemptId to amount of memory used for unrolling a block (in bytes)
@@ -183,7 +183,7 @@ private[spark] class MemoryStore(
    *         the actual stored data size is larger than reserved, but we can't request extra
    *         memory).
    */
-  private def putIterator[T](
+  private def putIterator[T]( // SSY put it into the memoryStore by iterating through it
       blockId: BlockId,
       values: Iterator[T],
       classTag: ClassTag[T],
@@ -218,8 +218,8 @@ private[spark] class MemoryStore(
     }
 
     // Unroll this block safely, checking whether we have exceeded our threshold periodically
-    while (values.hasNext && keepUnrolling) {
-      valuesHolder.storeValue(values.next())
+    while (values.hasNext && keepUnrolling) { // SSY store this iterator's element one by one into the valuesHolder
+      valuesHolder.storeValue(values.next()) // SSY the same storeValue in SerializedValuesHolder and DeserializedValuesHolder  is diff
       if (elementsUnrolled % memoryCheckPeriod == 0) {
         val currentSize = valuesHolder.estimatedSize()
         // If our vector's size has exceeded the threshold, request more memory
@@ -241,7 +241,7 @@ private[spark] class MemoryStore(
     // the block's actual memory usage has exceeded the unroll memory by a small amount, so we
     // perform one final call to attempt to allocate additional memory if necessary.
     if (keepUnrolling) {
-      val entryBuilder = valuesHolder.getBuilder()
+      val entryBuilder = valuesHolder.getBuilder() // SSY get the builder , and store it into the memoryManager below
       val size = entryBuilder.preciseSize
       if (size > unrollMemoryUsedByThisBlock) {
         val amountToRequest = size - unrollMemoryUsedByThisBlock
@@ -261,16 +261,16 @@ private[spark] class MemoryStore(
         }
 
         entries.synchronized {
-          entries.put(blockId, entry)
+          entries.put(blockId, entry) // SSY KV store
         }
 
         logInfo("Block %s stored as values in memory (estimated size %s, free %s)".format(blockId,
           Utils.bytesToString(entry.size), Utils.bytesToString(maxMemory - blocksMemoryUsed)))
-        Right(entry.size)
+        Right(entry.size) // SSY Right means success
       } else {
         // We ran out of space while unrolling the values for this block
         logUnrollFailureMessage(blockId, entryBuilder.preciseSize)
-        Left(unrollMemoryUsedByThisBlock)
+        Left(unrollMemoryUsedByThisBlock) // SSY while Left means fail
       }
     } else {
       // We ran out of space while unrolling the values for this block
@@ -289,14 +289,18 @@ private[spark] class MemoryStore(
    *         `close()` on it in order to free the storage memory consumed by the partially-unrolled
    *         block.
    */
+	// SSY called in 
+  // core/src/main/scala/org/apache/spark/storage/BlockManager.scala
+  // core/src/test/scala/org/apache/spark/storage/BlockManagerSuite.scala only test
+  // core/src/test/scala/org/apache/spark/storage/MemoryStoreSuite.scala
   private[storage] def putIteratorAsValues[T](
       blockId: BlockId,
-      values: Iterator[T],
+      values: Iterator[T], // SSY this values have been computed
       classTag: ClassTag[T]): Either[PartiallyUnrolledIterator[T], Long] = {
 
-    val valuesHolder = new DeserializedValuesHolder[T](classTag)
+    val valuesHolder = new DeserializedValuesHolder[T](classTag) // SSY but this valuesHolder do NOT come from memoryManager, what is the relation between them
 
-    putIterator(blockId, values, classTag, MemoryMode.ON_HEAP, valuesHolder) match {
+    putIterator(blockId, values, classTag, MemoryMode.ON_HEAP, valuesHolder) match { // SSY put values into valuesHolder, but how to store this new valuesHolder?
       case Right(storedSize) => Right(storedSize)
       case Left(unrollMemoryUsedByThisBlock) =>
         val unrolledIterator = if (valuesHolder.vector != null) {
@@ -324,7 +328,7 @@ private[spark] class MemoryStore(
    *         iterator or call `discard()` on it in order to free the storage memory consumed by the
    *         partially-unrolled block.
    */
-  private[storage] def putIteratorAsBytes[T](
+  private[storage] def putIteratorAsBytes[T]( // SSY spill
       blockId: BlockId,
       values: Iterator[T],
       classTag: ClassTag[T],
@@ -343,7 +347,7 @@ private[spark] class MemoryStore(
       initialMemoryThreshold.toInt
     }
 
-    val valuesHolder = new SerializedValuesHolder[T](blockId, chunkSize, classTag,
+    val valuesHolder = new SerializedValuesHolder[T](blockId, chunkSize, classTag, // SSY creating an object holder
       memoryMode, serializerManager)
 
     putIterator(blockId, values, classTag, memoryMode, valuesHolder) match {
@@ -374,7 +378,7 @@ private[spark] class MemoryStore(
   }
 
   def getValues(blockId: BlockId): Option[Iterator[_]] = {
-    val entry = entries.synchronized { entries.get(blockId) }
+    val entry = entries.synchronized { entries.get(blockId) } // SSY get it from store
     entry match {
       case null => None
       case e: SerializedMemoryEntry[_] =>
@@ -431,7 +435,7 @@ private[spark] class MemoryStore(
    * @param memoryMode the type of memory to free (on- or off-heap)
    * @return the amount of memory (in bytes) freed by eviction
    */
-  private[spark] def evictBlocksToFreeSpace(
+  private[spark] def evictBlocksToFreeSpace( // SSY free current space
       blockId: Option[BlockId],
       space: Long,
       memoryMode: MemoryMode): Long = {
@@ -447,16 +451,16 @@ private[spark] class MemoryStore(
       // (because of getValue or getBytes) while traversing the iterator, as that
       // can lead to exceptions.
       entries.synchronized {
-        val iterator = entries.entrySet().iterator()
-        while (freedMemory < space && iterator.hasNext) {
+        val iterator = entries.entrySet().iterator() // SSY getting the iterator in entries of all data
+        while (freedMemory < space && iterator.hasNext) { // SSY iterating through all elements
           val pair = iterator.next()
           val blockId = pair.getKey
           val entry = pair.getValue
-          if (blockIsEvictable(blockId, entry)) {
+          if (blockIsEvictable(blockId, entry)) { // SSY it can be evicted
             // We don't want to evict blocks which are currently being read, so we need to obtain
             // an exclusive write lock on blocks which are candidates for eviction. We perform a
             // non-blocking "tryLock" here in order to ignore blocks which are locked for reading:
-            if (blockInfoManager.lockForWriting(blockId, blocking = false).isDefined) {
+            if (blockInfoManager.lockForWriting(blockId, blocking = false).isDefined) { // SSY marking KVs not being reading
               selectedBlocks += blockId
               freedMemory += pair.getValue.size
             }
@@ -487,7 +491,7 @@ private[spark] class MemoryStore(
         try {
           logInfo(s"${selectedBlocks.size} blocks selected for dropping " +
             s"(${Utils.bytesToString(freedMemory)} bytes)")
-          (0 until selectedBlocks.size).foreach { idx =>
+          (0 until selectedBlocks.size).foreach { idx => // SSY iterating through all 
             val blockId = selectedBlocks(idx)
             val entry = entries.synchronized {
               entries.get(blockId)
@@ -496,7 +500,7 @@ private[spark] class MemoryStore(
             // blocks and removing entries. However the check is still here for
             // future safety.
             if (entry != null) {
-              dropBlock(blockId, entry)
+              dropBlock(blockId, entry)a // SSY drop it
               afterDropAction(blockId)
             }
             lastSuccessfulBlock = idx
@@ -549,6 +553,8 @@ private[spark] class MemoryStore(
       memory: Long,
       memoryMode: MemoryMode): Boolean = {
     memoryManager.synchronized {
+			// SSY core/src/main/scala/org/apache/spark/memory/UnifiedMemoryManager.scala
+			// SSY calling back to evictBlocksToFreeSpace
       val success = memoryManager.acquireUnrollMemory(blockId, memory, memoryMode)
       if (success) {
         val taskAttemptId = currentTaskAttemptId()
@@ -656,13 +662,13 @@ private trait ValuesHolder[T] {
 /**
  * A holder for storing the deserialized values.
  */
-private class DeserializedValuesHolder[T] (classTag: ClassTag[T]) extends ValuesHolder[T] {
+private class DeserializedValuesHolder[T] (classTag: ClassTag[T]) extends ValuesHolder[T] { // SSY for deserialized object
   // Underlying vector for unrolling the block
   var vector = new SizeTrackingVector[T]()(classTag)
   var arrayValues: Array[T] = null
 
   override def storeValue(value: T): Unit = {
-    vector += value
+    vector += value //SSY simply put to vector , but no spill caused by out of memory
   }
 
   override def estimatedSize(): Long = {
@@ -705,7 +711,10 @@ private class SerializedValuesHolder[T](
   }
 
   override def storeValue(value: T): Unit = {
-    serializationStream.writeObject(value)(classTag)
+		// SSY not too much class derived from SerializationStream have writeObject
+		// core/src/main/scala/org/apache/spark/serializer/JavaSerializer.scala
+		// core/src/main/scala/org/apache/spark/serializer/KryoSerializer.scala that use kryo serializer
+    serializationStream.writeObject(value)(classTag) // SSY much expensive way to place it into stream
   }
 
   override def estimatedSize(): Long = {

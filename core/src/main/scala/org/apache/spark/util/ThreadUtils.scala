@@ -87,7 +87,7 @@ private[spark] object ThreadUtils {
         lock.unlock()
       }
     }
-
+		// SSY from core/src/main/scala/org/apache/spark/executor/Executor.scala 
     override def execute(command: Runnable): Unit = {
       lock.lock()
       try {
@@ -97,7 +97,7 @@ private[spark] object ThreadUtils {
         lock.unlock()
       }
       try {
-        command.run()
+        command.run() //SSY core/src/main/scala/org/apache/spark/executor/Executor.scala
       } finally {
         lock.lock()
         try {

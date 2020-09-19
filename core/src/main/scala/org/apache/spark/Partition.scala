@@ -24,7 +24,7 @@ trait Partition extends Serializable {
   /**
    * Get the partition's index within its parent RDD
    */
-  def index: Int
+  def index: Int // SSY only the INT index make sense
 
   // A better default implementation of HashCode
   override def hashCode(): Int = index

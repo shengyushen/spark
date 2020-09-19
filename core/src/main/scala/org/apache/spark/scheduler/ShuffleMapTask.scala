@@ -52,7 +52,7 @@ import org.apache.spark.rdd.RDD
 private[spark] class ShuffleMapTask(
     stageId: Int,
     stageAttemptId: Int,
-    taskBinary: Broadcast[Array[Byte]],
+    taskBinary: Broadcast[Array[Byte]], // SSY taskBinary is a Broadcast object
     partition: Partition,
     @transient private var locs: Seq[TaskLocation],
     localProperties: Properties,
@@ -73,7 +73,7 @@ private[spark] class ShuffleMapTask(
   @transient private val preferredLocs: Seq[TaskLocation] = {
     if (locs == null) Nil else locs.distinct
   }
-
+	// SSY call from core/src/main/scala/org/apache/spark/scheduler/Task.scala 
   override def runTask(context: TaskContext): MapStatus = {
     // Deserialize the RDD using the broadcast variable.
     val threadMXBean = ManagementFactory.getThreadMXBean
@@ -88,14 +88,15 @@ private[spark] class ShuffleMapTask(
     _executorDeserializeCpuTime = if (threadMXBean.isCurrentThreadCpuTimeSupported) {
       threadMXBean.getCurrentThreadCpuTime - deserializeStartCpuTime
     } else 0L
-
-    val rdd = rddAndDep._1
-    val dep = rddAndDep._2
+		// SSY seririalized at ../spark/core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala 
+    val rdd = rddAndDep._1 //SSY dest rdd with refer to all partion location
+    val dep = rddAndDep._2 // SSY src operator
     // While we use the old shuffle fetch protocol, we use partitionId as mapId in the
     // ShuffleBlockId construction.
     val mapId = if (SparkEnv.get.conf.get(config.SHUFFLE_USE_OLD_FETCH_PROTOCOL)) {
       partitionId
     } else context.taskAttemptId()
+		// SSY ./core/src/main/scala/org/apache/spark/shuffle/ShuffleWriteProcessor.scala
     dep.shuffleWriterProcessor.write(rdd, dep, mapId, context, partition)
   }
 

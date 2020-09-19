@@ -22,6 +22,7 @@ import scala.reflect.ClassTag
 /**
  * An append-only buffer that keeps track of its estimated size in bytes.
  */
+//SSY hoho append only bufffer
 private[spark] class SizeTrackingVector[T: ClassTag]
   extends PrimitiveVector[T]
   with SizeTracker {

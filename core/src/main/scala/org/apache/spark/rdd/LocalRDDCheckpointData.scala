@@ -53,7 +53,7 @@ private[spark] class LocalRDDCheckpointData[T: ClassTag](@transient private val 
     if (missingPartitionIndices.nonEmpty) {
       rdd.sparkContext.runJob(rdd, action, missingPartitionIndices)
     }
-
+		// SSY haha check point is also a transform that can only be recorded in graph without actually computing
     new LocalCheckpointRDD[T](rdd)
   }
 

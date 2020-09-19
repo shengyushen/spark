@@ -39,10 +39,10 @@ import org.apache.spark.internal.Logging
  * @param lock a [[MemoryManager]] instance to synchronize on
  * @param memoryMode the type of memory tracked by this pool (on- or off-heap)
  */
-private[memory] class ExecutionMemoryPool(
+private[memory] class ExecutionMemoryPool( // SSY spill  this is exactly the place to spill memory and share between multiple tasks
     lock: Object,
     memoryMode: MemoryMode
-  ) extends MemoryPool(lock) with Logging {
+  ) extends MemoryPool(lock) with Logging { // SSY ./core/src/main/scala/org/apache/spark/memory/MemoryPool.scala
 
   private[this] val poolName: String = memoryMode match {
     case MemoryMode.ON_HEAP => "on-heap execution"
@@ -88,7 +88,7 @@ private[memory] class ExecutionMemoryPool(
    *
    * @return the number of bytes granted to the task.
    */
-  private[memory] def acquireMemory(
+  private[memory] def acquireMemory( // SSY spill
       numBytes: Long,
       taskAttemptId: Long,
       maybeGrowPool: Long => Unit = (additionalSpaceNeeded: Long) => (),
@@ -100,7 +100,7 @@ private[memory] class ExecutionMemoryPool(
     // Add this task to the taskMemory map just so we can keep an accurate count of the number
     // of active tasks, to let other tasks ramp down their memory in calls to `acquireMemory`
     if (!memoryForTask.contains(taskAttemptId)) {
-      memoryForTask(taskAttemptId) = 0L
+      memoryForTask(taskAttemptId) = 0L // SSY no memory at the mean time
       // This will later cause waiting tasks to wake up and check numTasks again
       lock.notifyAll()
     }
@@ -116,7 +116,7 @@ private[memory] class ExecutionMemoryPool(
       // In every iteration of this loop, we should first try to reclaim any borrowed execution
       // space from storage. This is necessary because of the potential race condition where new
       // storage blocks may steal the free execution memory that this task was waiting for.
-      maybeGrowPool(numBytes - memoryFree)
+      maybeGrowPool(numBytes - memoryFree) // SSY external memory allocator
 
       // Maximum size the pool would have after potentially growing the pool.
       // This is used to compute the upper bound of how much memory each task can occupy. This

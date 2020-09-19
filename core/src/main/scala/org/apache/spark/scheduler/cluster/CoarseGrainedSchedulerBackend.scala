@@ -163,6 +163,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
         }
 
       case ReviveOffers =>
+				// SSY makeOffers
         makeOffers()
 
       case KillTask(taskId, executorId, interruptThread, reason) =>
@@ -309,6 +310,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
         scheduler.resourceOffers(workOffers, true)
       }
       if (taskDescs.nonEmpty) {
+				// SSY somthing to do
         launchTasks(taskDescs)
       }
     }
@@ -346,8 +348,9 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
 
     // Launch tasks returned by a set of resource offers
     private def launchTasks(tasks: Seq[Seq[TaskDescription]]): Unit = {
-      for (task <- tasks.flatten) {
-        val serializedTask = TaskDescription.encode(task)
+      for (task <- tasks.flatten) {// SSY iteratino through all tasks
+				// SSY the java bytecode 
+        val serializedTask = TaskDescription.encode(task) // SSY haha encoding here
         if (serializedTask.limit() >= maxRpcMessageSize) {
           Option(scheduler.taskIdToTaskSetManager.get(task.taskId)).foreach { taskSetMgr =>
             try {
@@ -361,7 +364,8 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
             }
           }
         }
-        else {
+        else { //SSY going forward
+					// SSY  extracting ExecutorData for current task
           val executorData = executorDataMap(task.executorId)
           // Do resources allocation here. The allocated resources will get released after the task
           // finishes.
@@ -376,7 +380,9 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
 
           logDebug(s"Launching task ${task.taskId} on executor id: ${task.executorId} hostname: " +
             s"${executorData.executorHost}.")
-
+					// SSY core/src/main/scala/org/apache/spark/scheduler/cluster/ExecutorData.scala
+					// SSY send to core/src/main/scala/org/apache/spark/rpc/RpcEndpointRef.scala
+					// SSY core/src/main/scala/org/apache/spark/executor/CoarseGrainedExecutorBackend.scala will receive this message
           executorData.executorEndpoint.send(LaunchTask(new SerializableBuffer(serializedTask)))
         }
       }
@@ -486,7 +492,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
       shouldDisable
     }
   }
-
+	// SSY core/src/main/scala/org/apache/spark/rpc/netty/NettyRpcEnv.scala
   val driverEndpoint = rpcEnv.setupEndpoint(ENDPOINT_NAME, createDriverEndpoint())
 
   protected def minRegisteredRatio: Double = _minRegisteredRatio
@@ -559,8 +565,10 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
       removeExecutor(eid, SlaveLost("Stale executor after cluster manager re-registered."))
     }
   }
-
+	// SSY send ReviveOffers to driverEndpoint
+	// and I will get it above in receive
   override def reviveOffers(): Unit = {
+		// core/src/main/scala/org/apache/spark/rpc/netty/NettyRpcEnv.scala
     driverEndpoint.send(ReviveOffers)
   }
 
