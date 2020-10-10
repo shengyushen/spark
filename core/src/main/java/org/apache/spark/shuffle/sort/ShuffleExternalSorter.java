@@ -65,6 +65,7 @@ import org.apache.spark.util.Utils;
  * spill files. Instead, this merging is performed in {@link UnsafeShuffleWriter}, which uses a
  * specialized merge procedure that avoids extra serialization/deserialization.
  */
+// MemoryConsumer contain taskMemoryManager
 final class ShuffleExternalSorter extends MemoryConsumer {
 
   private static final Logger logger = LoggerFactory.getLogger(ShuffleExternalSorter.class);

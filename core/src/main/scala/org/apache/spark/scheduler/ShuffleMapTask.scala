@@ -88,7 +88,9 @@ private[spark] class ShuffleMapTask(
     _executorDeserializeCpuTime = if (threadMXBean.isCurrentThreadCpuTimeSupported) {
       threadMXBean.getCurrentThreadCpuTime - deserializeStartCpuTime
     } else 0L
-		// SSY seririalized at ../spark/core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala 
+		// SSY seririalized at driver side in ../spark/core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala searching  taskBinaryBytes
+		// it only start the shuffle job
+		// here receive the job
     val rdd = rddAndDep._1 //SSY dest rdd with refer to all partion location
     val dep = rddAndDep._2 // SSY src operator
     // While we use the old shuffle fetch protocol, we use partitionId as mapId in the
@@ -96,8 +98,9 @@ private[spark] class ShuffleMapTask(
     val mapId = if (SparkEnv.get.conf.get(config.SHUFFLE_USE_OLD_FETCH_PROTOCOL)) {
       partitionId
     } else context.taskAttemptId()
-		// SSY ./core/src/main/scala/org/apache/spark/shuffle/ShuffleWriteProcessor.scala
+		// SSY the executor tell the dep to write out its data ./core/src/main/scala/org/apache/spark/shuffle/ShuffleWriteProcessor.scala
     dep.shuffleWriterProcessor.write(rdd, dep, mapId, context, partition)
+		// SSY where is the shuffle read?
   }
 
   override def preferredLocations: Seq[TaskLocation] = preferredLocs

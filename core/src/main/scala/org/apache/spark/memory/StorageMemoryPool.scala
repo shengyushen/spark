@@ -89,7 +89,8 @@ private[memory] class StorageMemoryPool(
     assert(numBytesToFree >= 0)
     assert(memoryUsed <= poolSize)
     if (numBytesToFree > 0) {
-      memoryStore.evictBlocksToFreeSpace(Some(blockId), numBytesToFree, memoryMode) // SSY it have outside memoryStore, we can direct call it
+      memoryStore.evictBlocksToFreeSpace(Some(blockId), numBytesToFree, memoryMode) // SSY evict entries of executiong memory in StorageMemoryPool, 
+		// while in ExecutionMemoryPool we call maybeGrowExecutionPool to freeSpaceToShrinkPool below
     }
     // NOTE: If the memory store evicts blocks, then those evictions will synchronously call
     // back into this StorageMemoryPool in order to free memory. Therefore, these variables
@@ -127,7 +128,7 @@ private[memory] class StorageMemoryPool(
     if (remainingSpaceToFree > 0) {
       // If reclaiming free memory did not adequately shrink the pool, begin evicting blocks:
       val spaceFreedByEviction =
-        memoryStore.evictBlocksToFreeSpace(None, remainingSpaceToFree, memoryMode)
+        memoryStore.evictBlocksToFreeSpace(None, remainingSpaceToFree, memoryMode) // SSY core/src/main/scala/org/apache/spark/storage/memory/MemoryStore.scala 
       // When a block is released, BlockManager.dropFromMemory() calls releaseMemory(), so we do
       // not need to decrement _memoryUsed here. However, we do need to decrement the pool size.
       spaceFreedByReleasingUnusedMemory + spaceFreedByEviction

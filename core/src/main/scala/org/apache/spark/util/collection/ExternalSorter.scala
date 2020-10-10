@@ -659,7 +659,7 @@ private[spark] class ExternalSorter[K, V, C](
       }
     } else {
       // Merge spilled and in-memory data
-      merge(spills, destructiveIterator(
+      merge(spills, destructiveIterator( // SSY this is merge sort
         collection.partitionedDestructiveSortedIterator(comparator)))
     }
   }
@@ -756,14 +756,16 @@ private[spark] class ExternalSorter[K, V, C](
           }
         }
         nextPartitionId = partitionId + 1
-      }
+      
     } else {
       // We must perform merge-sort; get an iterator by partition and write everything directly.
-      for ((id, elements) <- this.partitionedIterator) {
+      for ((id, elements) <- this.partitionedIterator) { // SSY this is merge sort
         val blockId = ShuffleBlockId(shuffleId, mapId, id)
         var partitionWriter: ShufflePartitionWriter = null
         var partitionPairsWriter: ShufflePartitionPairsWriter = null
         TryUtils.tryWithSafeFinally {
+					// SSY empty in core/src/main/java/org/apache/spark/shuffle/api/ShuffleMapOutputWriter.java
+					// SSY core/src/main/java/org/apache/spark/shuffle/sort/io/LocalDiskShuffleDataIO.java
           partitionWriter = mapOutputWriter.getPartitionWriter(id)
           partitionPairsWriter = new ShufflePartitionPairsWriter(
             partitionWriter,

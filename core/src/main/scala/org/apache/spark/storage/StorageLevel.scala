@@ -235,7 +235,7 @@ object StorageLevel {
   private[spark] val storageLevelCache = new ConcurrentHashMap[StorageLevel, StorageLevel]()
 
   private[spark] def getCachedStorageLevel(level: StorageLevel): StorageLevel = {
-    storageLevelCache.putIfAbsent(level, level)
+    storageLevelCache.putIfAbsent(level, level) // SSY level to level mapping itself?
     storageLevelCache.get(level)
   }
 }

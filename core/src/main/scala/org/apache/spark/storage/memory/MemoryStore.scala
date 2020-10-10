@@ -146,6 +146,7 @@ private[spark] class MemoryStore(
       memoryMode: MemoryMode,
       _bytes: () => ChunkedByteBuffer): Boolean = {
     require(!contains(blockId), s"Block $blockId is already present in the MemoryStore")
+		// SSY ./core/src/main/scala/org/apache/spark/memory/UnifiedMemoryManager.scala
     if (memoryManager.acquireStorageMemory(blockId, size, memoryMode)) {
       // We acquired enough memory for the block, so go ahead and put it
       val bytes = _bytes()
@@ -298,7 +299,7 @@ private[spark] class MemoryStore(
       values: Iterator[T], // SSY this values have been computed
       classTag: ClassTag[T]): Either[PartiallyUnrolledIterator[T], Long] = {
 
-    val valuesHolder = new DeserializedValuesHolder[T](classTag) // SSY but this valuesHolder do NOT come from memoryManager, what is the relation between them
+    val valuesHolder = new DeserializedValuesHolder[T](classTag) // SSY defined above
 
     putIterator(blockId, values, classTag, MemoryMode.ON_HEAP, valuesHolder) match { // SSY put values into valuesHolder, but how to store this new valuesHolder?
       case Right(storedSize) => Right(storedSize)
@@ -347,7 +348,7 @@ private[spark] class MemoryStore(
       initialMemoryThreshold.toInt
     }
 
-    val valuesHolder = new SerializedValuesHolder[T](blockId, chunkSize, classTag, // SSY creating an object holder
+    val valuesHolder = new SerializedValuesHolder[T](blockId, chunkSize, classTag, // SSY creating an object holder targeting off heap with Platform package above
       memoryMode, serializerManager)
 
     putIterator(blockId, values, classTag, memoryMode, valuesHolder) match {
@@ -435,7 +436,7 @@ private[spark] class MemoryStore(
    * @param memoryMode the type of memory to free (on- or off-heap)
    * @return the amount of memory (in bytes) freed by eviction
    */
-  private[spark] def evictBlocksToFreeSpace( // SSY free current space
+  private[spark] def evictBlocksToFreeSpace( // SSY free current space in entries
       blockId: Option[BlockId],
       space: Long,
       memoryMode: MemoryMode): Long = {
@@ -698,15 +699,18 @@ private class SerializedValuesHolder[T](
     serializerManager: SerializerManager) extends ValuesHolder[T] {
   val allocator = memoryMode match {
     case MemoryMode.ON_HEAP => ByteBuffer.allocate _
-    case MemoryMode.OFF_HEAP => Platform.allocateDirectBuffer _
+    case MemoryMode.OFF_HEAP => Platform.allocateDirectBuffer _ // SSY bypassing JVM
   }
 
   val redirectableStream = new RedirectableOutputStream
-  val bbos = new ChunkedByteBufferOutputStream(chunkSize, allocator)
-  redirectableStream.setOutputStream(bbos)
+  val bbos = new ChunkedByteBufferOutputStream(chunkSize, allocator) // SSY output to this allocator 
+  redirectableStream.setOutputStream(bbos) // SSY output stream to bbos
   val serializationStream: SerializationStream = {
     val autoPick = !blockId.isInstanceOf[StreamBlockId]
+		// SSY get new serializer 
+		// this serializerManager must have some special setting for storing into memory
     val ser = serializerManager.getSerializer(classTag, autoPick).newInstance()
+		// SSY output to allocator
     ser.serializeStream(serializerManager.wrapForCompression(blockId, redirectableStream))
   }
 

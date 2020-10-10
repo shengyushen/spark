@@ -315,7 +315,7 @@ private[spark] class BlockManager(
      * block already exists). If false, this method will hold no locks when it returns.
      *
      * @return true if the block was already present or if the put succeeded, false otherwise.
-     */
+     */ // SSY save_BlockStoreUpdater
      def save(): Boolean = {
       doPut(blockId, level, classTag, tellMaster, keepReadLock) { info =>
         val startTimeNs = System.nanoTime()
@@ -815,6 +815,7 @@ private[spark] class BlockManager(
             memoryStore.getValues(blockId).get // SSY haha it is in memoryStore, not memory manager
           } else {
             serializerManager.dataDeserializeStream( // SSY deserializing from memory
+					// SSY ./core/src/main/scala/org/apache/spark/storage/memory/MemoryStore.scala
               blockId, memoryStore.getBytes(blockId).get.toInputStream())(info.classTag)
           }
           // We need to capture the current taskId in case the iterator completion is triggered
@@ -1267,7 +1268,7 @@ private[spark] class BlockManager(
     require(bytes != null, "Bytes is null")
     val blockStoreUpdater =
       ByteBufferBlockStoreUpdater(blockId, level, implicitly[ClassTag[T]], bytes, tellMaster)
-    blockStoreUpdater.save()
+    blockStoreUpdater.save() // SSY save_BlockStoreUpdater  above
   }
 
   /**

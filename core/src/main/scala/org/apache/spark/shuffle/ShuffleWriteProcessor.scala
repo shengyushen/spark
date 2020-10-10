@@ -54,12 +54,13 @@ private[spark] class ShuffleWriteProcessor extends Serializable with Logging {
       val manager = SparkEnv.get.shuffleManager
 			// SSY SortShuffleManager full defined core/src/main/scala/org/apache/spark/shuffle/sort/SortShuffleManager.scala
 			// only getReader  no getWriter core/src/main/scala/org/apache/spark/shuffle/ShuffleManager.scala
-      writer = manager.getWriter[Any, Any](
+      writer = manager.getWriter[Any, Any]( // SSY getWriter on core/src/main/scala/org/apache/spark/shuffle/sort/SortShuffleManager.scala 
         dep.shuffleHandle, // SSY only type, not real class or function
         mapId,
         context,
         createMetricsReporter(context))
-      writer.write(// SSY haha triggering rdd iterator and then compute in core/src/main/scala/org/apache/spark/rdd/RDD.scala 
+      writer.write(
+// SSY haha triggering rdd iterator and then compute in core/src/main/scala/org/apache/spark/rdd/RDD.scala 
         rdd.iterator(partition, context).asInstanceOf[Iterator[_ <: Product2[Any, Any]]])
       writer.stop(success = true).get
     } catch {

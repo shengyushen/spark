@@ -55,7 +55,7 @@ import org.apache.spark.sql.util.ExecutionListenerManager
  * @since 1.0.0
  */
 @Stable
-class SQLContext private[sql](val sparkSession: SparkSession)
+class SQLContext private[sql](val sparkSession: SparkSession)// SSY replaced by SparkSession
   extends Logging with Serializable {
 
   self =>

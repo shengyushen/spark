@@ -56,6 +56,7 @@ import org.apache.spark.util.Utils;
  * maximum size of a long[] array, allowing us to address 8192 * (2^31 - 1) * 8 bytes, which is
  * approximately 140 terabytes of memory.
  */
+//SSY IMPORTANT, we can not store pointer, because it may move on heap
 public class TaskMemoryManager {
 
   private static final Logger logger = LoggerFactory.getLogger(TaskMemoryManager.class);
@@ -145,7 +146,7 @@ public class TaskMemoryManager {
     // off-heap memory. This is subject to change, though, so it may be risky to make this
     // optimization now in case we forget to undo it late when making changes.
     synchronized (this) {
-      long got = memoryManager.acquireExecutionMemory(required, taskAttemptId, mode); // SSY acquireExecutionMemory
+      long got = memoryManager.acquireExecutionMemory(required, taskAttemptId, mode); // SSY acquireExecutionMemory from embedded memoryManager
 
       // Try to release memory from other consumers first, then we can reduce the frequency of
       // spilling, avoid to have too many spilled files.

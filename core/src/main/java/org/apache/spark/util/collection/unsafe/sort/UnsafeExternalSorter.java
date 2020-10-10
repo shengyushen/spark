@@ -45,6 +45,7 @@ import org.apache.spark.util.Utils;
 /**
  * External sorter based on {@link UnsafeInMemorySorter}.
  */
+// SSY MemoryConsumer?
 public final class UnsafeExternalSorter extends MemoryConsumer {
 
   private static final Logger logger = LoggerFactory.getLogger(UnsafeExternalSorter.class);

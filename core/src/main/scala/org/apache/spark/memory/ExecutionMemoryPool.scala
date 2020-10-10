@@ -91,7 +91,7 @@ private[memory] class ExecutionMemoryPool( // SSY spill  this is exactly the pla
   private[memory] def acquireMemory( // SSY spill
       numBytes: Long,
       taskAttemptId: Long,
-      maybeGrowPool: Long => Unit = (additionalSpaceNeeded: Long) => (),
+      maybeGrowPool: Long => Unit = (additionalSpaceNeeded: Long) => (), // SSY we call maybeGrowExecutionPool in UnifiedMemoryManager to call StorageMemoryPool's freeSpaceToShrinkPool to free sotrage space
       computeMaxPoolSize: () => Long = () => poolSize): Long = lock.synchronized {
     assert(numBytes > 0, s"invalid number of bytes requested: $numBytes")
 

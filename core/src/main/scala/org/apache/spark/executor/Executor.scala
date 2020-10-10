@@ -399,12 +399,13 @@ private[spark] class Executor(
       setTaskFinishedAndClearInterruptStatus()
       (accums, accUpdates)
     }
-		// SSY run
+		// SSY TaskRunner
     override def run(): Unit = {
       setMDCForTask(taskName, mdcProperties)
       threadId = Thread.currentThread.getId
       Thread.currentThread.setName(threadName)
       val threadMXBean = ManagementFactory.getThreadMXBean
+			// SSY haha passing memoryManager into taskMemoryManager
       val taskMemoryManager = new TaskMemoryManager(env.memoryManager, taskId) // SSY TaskMemoryManager using env.memoryManager
       val deserializeStartTimeNs = System.nanoTime()
       val deserializeStartCpuTime = if (threadMXBean.isCurrentThreadCpuTimeSupported) {
@@ -510,7 +511,7 @@ private[spark] class Executor(
 
         val resultSer = env.serializer.newInstance()
         val beforeSerializationNs = System.nanoTime()
-        val valueBytes = resultSer.serialize(value)
+        val valueBytes = resultSer.serialize(value) // SSY serialized version of final result
         val afterSerializationNs = System.nanoTime()
 
         // Deserialization happens in two parts: first, we deserialize a Task object, which
@@ -573,20 +574,22 @@ private[spark] class Executor(
         val accumUpdates = task.collectAccumulatorUpdates()
         val metricPeaks = metricsPoller.getTaskMetricPeaks(taskId)
         // TODO: do not serialize value twice
+				// SSY so fucking stupid, serialize tyhe DirectTaskResult unnessasary here
         val directResult = new DirectTaskResult(valueBytes, accumUpdates, metricPeaks)
         val serializedDirectResult = ser.serialize(directResult)
         val resultSize = serializedDirectResult.limit()
 
         // directSend = sending directly back to the driver
+				// SSY haha, this comment means direct send to driver without serialize first, so fucking stupid
         val serializedResult: ByteBuffer = {
-          if (maxResultSize > 0 && resultSize > maxResultSize) {
+          if (maxResultSize > 0 && resultSize > maxResultSize) { // SSY huge object will be dropped directly
             logWarning(s"Finished $taskName (TID $taskId). Result is larger than maxResultSize " +
               s"(${Utils.bytesToString(resultSize)} > ${Utils.bytesToString(maxResultSize)}), " +
               s"dropping it.")
             ser.serialize(new IndirectTaskResult[Any](TaskResultBlockId(taskId), resultSize))
-          } else if (resultSize > maxDirectResultSize) {
+          } else if (resultSize > maxDirectResultSize) { // SSY large result will be put into blockManager, instead of send to driver
             val blockId = TaskResultBlockId(taskId)
-            env.blockManager.putBytes(
+            env.blockManager.putBytes( //SSY put blockManager
               blockId,
               new ChunkedByteBuffer(serializedDirectResult.duplicate()),
               StorageLevel.MEMORY_AND_DISK_SER)
@@ -595,12 +598,13 @@ private[spark] class Executor(
             ser.serialize(new IndirectTaskResult[Any](blockId, resultSize))
           } else {
             logInfo(s"Finished $taskName (TID $taskId). $resultSize bytes result sent to driver")
-            serializedDirectResult
+            serializedDirectResult //SSY direct result
           }
         }
 
         executorSource.SUCCEEDED_TASKS.inc(1L)
         setTaskFinishedAndClearInterruptStatus()
+				// SSY send back result to core/src/main/scala/org/apache/spark/scheduler/TaskSchedulerImpl.scala
         execBackend.statusUpdate(taskId, TaskState.FINISHED, serializedResult)
       } catch {
         case t: TaskKilledException =>

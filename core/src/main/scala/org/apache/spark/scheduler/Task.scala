@@ -171,6 +171,7 @@ private[spark] abstract class Task[T](
   }
 
   private var taskMemoryManager: TaskMemoryManager = _
+	// SSY this is tungsten, but actually creating a taskMemoryManager need to embedding a MemoryManager
 
   def setTaskMemoryManager(taskMemoryManager: TaskMemoryManager): Unit = {
     this.taskMemoryManager = taskMemoryManager

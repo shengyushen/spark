@@ -190,7 +190,7 @@ public final class Platform {
 
   /**
    * Allocate a DirectByteBuffer, potentially bypassing the JVM's MaxDirectMemorySize limit.
-   */
+   */ // SSY bypassing JVM
   public static ByteBuffer allocateDirectBuffer(int size) {
     try {
       if (CLEANER_CREATE_METHOD == null) {

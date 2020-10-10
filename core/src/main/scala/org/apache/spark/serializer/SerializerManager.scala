@@ -33,6 +33,7 @@ import org.apache.spark.util.io.{ChunkedByteBuffer, ChunkedByteBufferOutputStrea
  * Component which configures serialization, compression and encryption for various Spark
  * components, including automatic selection of which [[Serializer]] to use for shuffles.
  */
+// SSY a standaalone class only? not base class?
 private[spark] class SerializerManager(
     defaultSerializer: Serializer,
     conf: SparkConf,

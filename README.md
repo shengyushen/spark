@@ -11,10 +11,14 @@ invoking script
 			./core/src/main/scala/org/apache/spark/scheduler/DAGScheduler.scala  post to eventProcessLoop
 			core/src/main/scala/org/apache/spark/util/EventLoop.scala  extracting job from eventProcessLoop
 			./core/src/main/scala/org/apache/spark/SparkContext.scala
+			./core/src/main/scala/org/apache/spark/SparkEnv.scala
 
 			./core/src/main/scala/org/apache/spark/executor/Executor.scala
 			./core/src/main/scala/org/apache/spark/scheduler/Stage.scala
 			./core/src/main/scala/org/apache/spark/rdd/HadoopRDD.scala
+			./core/src/main/scala/org/apache/spark/scheduler/Task.scala
+			./core/src/main/scala/org/apache/spark/shuffle/ShuffleWriteProcessor.scala
+			./core/src/main/scala/org/apache/spark/storage/BlockManager.scala
 
 all sorts of RDD
 

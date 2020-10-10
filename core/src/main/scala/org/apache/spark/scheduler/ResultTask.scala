@@ -89,7 +89,7 @@ private[spark] class ResultTask[T, U](
       threadMXBean.getCurrentThreadCpuTime - deserializeStartCpuTime
     } else 0L
 
-    func(context, rdd.iterator(partition, context)) // SSY haha computing the depending tasks
+    func(context, rdd.iterator(partition, context)) // SSY haha computing the depending tasks in core/src/main/scala/org/apache/spark/rdd/RDD.scala iterator 
   }
 
   // This is only callable on the driver side.

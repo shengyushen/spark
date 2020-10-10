@@ -35,6 +35,7 @@ import org.apache.spark.util.collection.OpenHashSet
  * read their portion of the map output. In cases where the map output data is too large to fit in
  * memory, sorted subsets of the output can be spilled to disk and those on-disk files are merged
  * to produce the final output file.
+ * SSY spill sorted subset on shuffle sorting 
  *
  * Sort-based shuffle has two different write paths for producing its map output files:
  *
@@ -57,7 +58,8 @@ import org.apache.spark.util.collection.OpenHashSet
  *    consumption and GC overheads. This optimization requires the record serializer to have certain
  *    properties to allow serialized records to be re-ordered without requiring deserialization.
  *    See SPARK-4550, where this optimization was first proposed and implemented, for more details.
- *
+ *   SSY sort on serialized data instead of original value
+ * 
  *  - It uses a specialized cache-efficient sorter ([[ShuffleExternalSorter]]) that sorts
  *    arrays of compressed record pointers and partition ids. By using only 8 bytes of space per
  *    record in the sorting array, this fits more of the array into cache.

@@ -109,6 +109,8 @@ private[spark] class UnifiedMemoryManager( // SSY this is the default one , but 
      * attempts. Each attempt must be able to evict storage in case another task jumps in
      * and caches a large block between the attempts. This is called once per attempt.
      */
+		// SSY called as callback from below
+		// SSY and I will freeSpaceToShrinkPool
     def maybeGrowExecutionPool(extraMemoryNeeded: Long): Unit = {
       if (extraMemoryNeeded > 0) {
         // There is not enough free memory in the execution pool, so try to reclaim memory from

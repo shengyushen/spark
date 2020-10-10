@@ -247,7 +247,7 @@ class KryoSerializer(conf: SparkConf)
 private[spark]
 class KryoSerializationStream(
     serInstance: KryoSerializerInstance,
-    outStream: OutputStream,
+    outStream: OutputStream, // SSY where does this stream come from?
     useUnsafe: Boolean) extends SerializationStream {
 
   private[this] var output: KryoOutput =

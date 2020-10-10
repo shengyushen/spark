@@ -61,9 +61,9 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
     getTaskResultExecutor.execute(new Runnable {
       override def run(): Unit = Utils.logUncaughtExceptions {
         try {
-          val (result, size) = serializer.get().deserialize[TaskResult[_]](serializedData) match {
+          val (result, size) = serializer.get().deserialize[TaskResult[_]](serializedData) match { // SSY for small object, I need to deser the sered result, may not be a big problem here,
             case directResult: DirectTaskResult[_] =>
-              if (!taskSetManager.canFetchMoreResults(serializedData.limit())) {
+              if (!taskSetManager.canFetchMoreResults(serializedData.limit())) { //SSY can not get some much data
                 // kill the task so that it will not become zombie task
                 scheduler.handleFailedTask(taskSetManager, tid, TaskState.KILLED, TaskKilled(
                   "Tasks result size has exceeded maxResultSize"))
@@ -72,9 +72,9 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
               // deserialize "value" without holding any lock so that it won't block other threads.
               // We should call it here, so that when it's called again in
               // "TaskSetManager.handleSuccessfulTask", it does not need to deserialize the value.
-              directResult.value(taskResultSerializer.get())
+              directResult.value(taskResultSerializer.get()) // SSY get the value, deser if necessary, why we need a pair of ser+deser here? may be this is only need for small object
               (directResult, serializedData.limit())
-            case IndirectTaskResult(blockId, size) =>
+            case IndirectTaskResult(blockId, size) => // SSY data is too large and written to blockManager
               if (!taskSetManager.canFetchMoreResults(size)) {
                 // dropped by executor if size is larger than maxResultSize
                 sparkEnv.blockManager.master.removeBlock(blockId)
@@ -84,8 +84,8 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
                 return
               }
               logDebug("Fetching indirect task result for TID %s".format(tid))
-              scheduler.handleTaskGettingResult(taskSetManager, tid)
-              val serializedTaskResult = sparkEnv.blockManager.getRemoteBytes(blockId)
+              scheduler.handleTaskGettingResult(taskSetManager, tid) // SSY core/src/main/scala/org/apache/spark/scheduler/TaskSchedulerImpl.scala 
+              val serializedTaskResult = sparkEnv.blockManager.getRemoteBytes(blockId) // SSY get from blockManager
               if (serializedTaskResult.isEmpty) {
                 /* We won't be able to get the task result if the machine that ran the task failed
                  * between when the task ended and when we tried to fetch the result, or if the
@@ -99,7 +99,7 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
               // force deserialization of referenced value
               deserializedResult.value(taskResultSerializer.get())
               sparkEnv.blockManager.master.removeBlock(blockId)
-              (deserializedResult, size)
+              (deserializedResult, size) // SSY get from blockManager and deser it
           }
 
           // Set the task result size in the accumulator updates received from the executors.
@@ -116,7 +116,7 @@ private[spark] class TaskResultGetter(sparkEnv: SparkEnv, scheduler: TaskSchedul
             }
           }
 
-          scheduler.handleSuccessfulTask(taskSetManager, tid, result)
+          scheduler.handleSuccessfulTask(taskSetManager, tid, result) // SSY TaskSchedulerImpl
         } catch {
           case cnf: ClassNotFoundException =>
             val loader = Thread.currentThread.getContextClassLoader

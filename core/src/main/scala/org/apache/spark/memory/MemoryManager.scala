@@ -114,7 +114,7 @@ private[spark] abstract class MemoryManager(
    * but an older task had a lot of memory already.
    */
   private[memory]
-  def acquireExecutionMemory( // SSY spill
+  def acquireExecutionMemory( // SSY memoryManager is embedded in taskMemoryManager in run method of Executor when run a task
       numBytes: Long,
       taskAttemptId: Long,
       memoryMode: MemoryMode): Long

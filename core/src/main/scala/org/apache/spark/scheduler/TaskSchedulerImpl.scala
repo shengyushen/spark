@@ -781,7 +781,7 @@ private[spark] class TaskSchedulerImpl(
             if (TaskState.isFinished(state)) {
               cleanupTaskState(tid)
               taskSet.removeRunningTask(tid)
-              if (state == TaskState.FINISHED) {
+              if (state == TaskState.FINISHED) { // SSY send back result from ~/spark/./core/src/main/scala/org/apache/spark/executor/Executor.scala 
                 taskResultGetter.enqueueSuccessfulTask(taskSet, tid, serializedData)
               } else if (Set(TaskState.FAILED, TaskState.KILLED, TaskState.LOST).contains(state)) {
                 taskResultGetter.enqueueFailedTask(taskSet, tid, state, serializedData)
@@ -830,7 +830,7 @@ private[spark] class TaskSchedulerImpl(
   }
 
   def handleTaskGettingResult(taskSetManager: TaskSetManager, tid: Long): Unit = synchronized {
-    taskSetManager.handleTaskGettingResult(tid)
+    taskSetManager.handleTaskGettingResult(tid) // SSY core/src/main/scala/org/apache/spark/scheduler/TaskSetManager.scala 
   }
 
   def handleSuccessfulTask(
