@@ -47,6 +47,7 @@ import org.apache.spark.sql.SparkSession
  *      sql.streaming.StructuredKafkaWordCount host1:port1,host2:port2 \
  *      subscribe topic1,topic2`
  */
+// SSY 
 object StructuredKafkaWordCount {
   def main(args: Array[String]): Unit = {
     if (args.length < 3) {
@@ -58,35 +59,45 @@ object StructuredKafkaWordCount {
     val Array(bootstrapServers, subscribeType, topics, _*) = args
     val checkpointLocation =
       if (args.length > 3) args(3) else "/tmp/temporary-" + UUID.randomUUID.toString
-
-    val spark = SparkSession
+		// SSY sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
+		// it replace sparkContext of normal bathing job
+		// and we can 
+    val spark = SparkSession  // SSY this is object, not class
       .builder
       .appName("StructuredKafkaWordCount")
       .getOrCreate()
 
+		//SSY this spark is not path, it refer to SparkSession we created above
+		// it can convert a seq into dataset or dataframe
+		// but no more dataframe, only dataset, they are unified after spark 2.0
     import spark.implicits._
 
     // Create DataSet representing the stream of input lines from kafka
     val lines = spark
-      .readStream
-      .format("kafka")
+      .readStream // SSY a data stream that can read kafka and parquet sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
+      .format("kafka") // SSY this is the source
       .option("kafka.bootstrap.servers", bootstrapServers)
       .option(subscribeType, topics)
-      .load()
-      .selectExpr("CAST(value AS STRING)")
-      .as[String]
+      .load() // SSY sql/core/src/main/scala/org/apache/spark/sql/streaming/DataStreamReader.scala geenrating Dataset
+      .selectExpr("CAST(value AS STRING)") // SSY sql/core/src/main/scala/org/apache/spark/sql/Dataset.scala
+      .as[String] // SSY sql/core/src/main/scala/org/apache/spark/sql/Dataset.scala and return Dataset
 
     // Generate running word count
-    val wordCounts = lines.flatMap(_.split(" ")).groupBy("value").count()
+		// groupBy geenrate RelationalGroupedDataset
+		// while count generate DataFrame that is actually Dataset
+    val wordCounts = lines.flatMap(_.split(" ")).groupBy("value").count() // SSY this is the old spark schema? just like RDD 
 
     // Start running the query that prints the running counts to the console
-    val query = wordCounts.writeStream
-      .outputMode("complete")
-      .format("console")
+		// wordCounts is Dataset
+    val query = wordCounts.writeStream // SSY DataStreamWriter sql/core/src/main/scala/org/apache/spark/sql/streaming/DataStreamWriter.scala
+      .outputMode("complete") // SSY DataStreamWriter
+      .format("console") // SSY DataStreamWriter output to console, this is also source
       .option("checkpointLocation", checkpointLocation)
-      .start()
+      .start() // SSY sql/core/src/main/scala/org/apache/spark/sql/streaming/DataStreamWriter.scala
+			// SSY return StreamingQuery sql/core/src/main/scala/org/apache/spark/sql/streaming/StreamingQuery.scala
+			// but actually start may produce ContinuousExecution and MicroBatchExecution both extend StreamExecution (with awaitTermination) again extend StreamingQuery 
 
-    query.awaitTermination()
+    query.awaitTermination() // SSY so awaitTermination come from StreamExecution
   }
 
 }

@@ -172,7 +172,7 @@ private[spark] abstract class Task[T](
 
   private var taskMemoryManager: TaskMemoryManager = _
 	// SSY this is tungsten, but actually creating a taskMemoryManager need to embedding a MemoryManager
-
+	// SSY calling from core/src/main/scala/org/apache/spark/executor/Executor.scala to send in newly taskMemoryManager with env.memoryManager
   def setTaskMemoryManager(taskMemoryManager: TaskMemoryManager): Unit = {
     this.taskMemoryManager = taskMemoryManager
   }

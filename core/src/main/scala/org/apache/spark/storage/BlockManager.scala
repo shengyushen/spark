@@ -814,7 +814,7 @@ private[spark] class BlockManager(
           val iter: Iterator[Any] = if (level.deserialized) { // SSY not serialized
             memoryStore.getValues(blockId).get // SSY haha it is in memoryStore, not memory manager
           } else {
-            serializerManager.dataDeserializeStream( // SSY deserializing from memory
+            serializerManager.dataDeserializeStream( // SSY still store in memoryStore, but deserialize with serializerManager
 					// SSY ./core/src/main/scala/org/apache/spark/storage/memory/MemoryStore.scala
               blockId, memoryStore.getBytes(blockId).get.toInputStream())(info.classTag)
           }
@@ -826,13 +826,13 @@ private[spark] class BlockManager(
           })
           Some(new BlockResult(ci, DataReadMethod.Memory, info.size))
         } else if (level.useDisk && diskStore.contains(blockId)) {
-          val diskData = diskStore.getBytes(blockId)
+          val diskData = diskStore.getBytes(blockId) // SSY get disk data 
           val iterToReturn: Iterator[Any] = {
             if (level.deserialized) {
               val diskValues = serializerManager.dataDeserializeStream(
                 blockId,
-                diskData.toInputStream())(info.classTag)
-              maybeCacheDiskValuesInMemory(info, blockId, level, diskValues)
+                diskData.toInputStream())(info.classTag)// SSY convert to stream
+              maybeCacheDiskValuesInMemory(info, blockId, level, diskValues) // SSY already get the disk value, but I need to cache it 
             } else {
               val stream = maybeCacheDiskBytesInMemory(info, blockId, level, diskData)
                 .map { _.toInputStream(dispose = false) }
@@ -1260,7 +1260,7 @@ private[spark] class BlockManager(
    *
    * @return true if the block was stored or false if an error occurred.
    */
-  def putBytes[T: ClassTag](
+  def putBytes[T: ClassTag]( // SSY caled in core/src/main/scala/org/apache/spark/executor/Executor.scala to return result
       blockId: BlockId,
       bytes: ChunkedByteBuffer,
       level: StorageLevel,
@@ -1465,7 +1465,7 @@ private[spark] class BlockManager(
    *         automatically be disposed and the caller should not continue to use them. Otherwise,
    *         if this returns None then the original disk store bytes will be unaffected.
    */
-  private def maybeCacheDiskBytesInMemory( // SSY spill
+  private def maybeCacheDiskBytesInMemory( // SSY disk cache in memory store
       blockInfo: BlockInfo,
       blockId: BlockId,
       level: StorageLevel,
@@ -1481,7 +1481,7 @@ private[spark] class BlockManager(
         } else {
           val allocator = level.memoryMode match {
             case MemoryMode.ON_HEAP => ByteBuffer.allocate _
-            case MemoryMode.OFF_HEAP => Platform.allocateDirectBuffer _
+            case MemoryMode.OFF_HEAP => Platform.allocateDirectBuffer _ // SSY direct buffer
           }
           val putSucceeded = memoryStore.putBytes(blockId, diskData.size, level.memoryMode, () => {
             // https://issues.apache.org/jira/browse/SPARK-6076
@@ -1599,7 +1599,7 @@ private[spark] class BlockManager(
    * Replicate block to another node. Note that this is a blocking call that returns after
    * the block has been replicated.
    */
-  private def replicate(
+  private def replicate( // SSY replicate
       blockId: BlockId,
       data: BlockData,
       level: StorageLevel,
@@ -1722,10 +1722,10 @@ private[spark] class BlockManager(
    * This method does not release the write lock.
    *
    * @return the block's new effective StorageLevel.
-   */
+   */ // SSY called from MemoryStore
   private[storage] override def dropFromMemory[T: ClassTag](
       blockId: BlockId,
-      data: () => Either[Array[T], ChunkedByteBuffer]): StorageLevel = {
+      data: () => Either[Array[T], ChunkedByteBuffer]): StorageLevel = { // SSY Either means two possible type
     logInfo(s"Dropping block $blockId from memory")
     val info = blockInfoManager.assertBlockIsLockedForWriting(blockId)
     var blockIsUpdated = false
@@ -1735,7 +1735,7 @@ private[spark] class BlockManager(
     if (level.useDisk && !diskStore.contains(blockId)) {
       logInfo(s"Writing block $blockId to disk")
       data() match {
-        case Left(elements) =>
+        case Left(elements) => // SSY elements seems an array?
           diskStore.put(blockId) { channel =>
             val out = Channels.newOutputStream(channel)
             serializerManager.dataSerializeStream(

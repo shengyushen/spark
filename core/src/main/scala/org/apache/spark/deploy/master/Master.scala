@@ -520,6 +520,7 @@ private[deploy] class Master(
       context.reply(BoundPortsResponse(address.port, webUi.boundPort, restServerBoundPort))
 
     case RequestExecutors(appId, requestedTotal) =>
+			// SSY receive from StandaloneAppClient
       context.reply(handleRequestExecutors(appId, requestedTotal))
 
     case KillExecutors(appId, executorIds) =>
@@ -1005,7 +1006,7 @@ private[deploy] class Master(
       case Some(appInfo) =>
         logInfo(s"Application $appId requested to set total executors to $requestedTotal.")
         appInfo.executorLimit = requestedTotal
-        schedule()
+        schedule() // SSY change to take effect with above requestedTotal
         true
       case None =>
         logWarning(s"Unknown application $appId requested $requestedTotal total executors.")
@@ -1145,13 +1146,14 @@ private[deploy] class Master(
 private[deploy] object Master extends Logging {
   val SYSTEM_NAME = "sparkMaster"
   val ENDPOINT_NAME = "Master"
-
+	// SSY entry point for master node
   def main(argStrings: Array[String]): Unit = {
     Thread.setDefaultUncaughtExceptionHandler(new SparkUncaughtExceptionHandler(
       exitOnUncaughtException = false))
     Utils.initDaemon(log)
     val conf = new SparkConf
     val args = new MasterArguments(argStrings, conf)
+		// SSY rpcEnv in core/src/main/scala/org/apache/spark/rpc/netty/NettyRpcEnv.scala
     val (rpcEnv, _, _) = startRpcEnvAndEndpoint(args.host, args.port, args.webUiPort, conf)
     rpcEnv.awaitTermination()
   }
@@ -1170,7 +1172,7 @@ private[deploy] object Master extends Logging {
     val securityMgr = new SecurityManager(conf)
     val rpcEnv = RpcEnv.create(SYSTEM_NAME, host, port, conf, securityMgr)
     val masterEndpoint = rpcEnv.setupEndpoint(ENDPOINT_NAME,
-      new Master(rpcEnv, rpcEnv.address, webUiPort, securityMgr, conf))
+      new Master(rpcEnv, rpcEnv.address, webUiPort, securityMgr, conf)) // SSY start Master above Worker at ./core/src/main/scala/org/apache/spark/deploy/worker/Worker.scala
     val portsResponse = masterEndpoint.askSync[BoundPortsResponse](BoundPortsRequest)
     (rpcEnv, portsResponse.webUIPort, portsResponse.restPort)
   }

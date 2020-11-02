@@ -105,7 +105,7 @@ public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> {
    */
   private boolean stopping = false;
 
-  public UnsafeShuffleWriter(
+  public UnsafeShuffleWriter(// SSY calling open below
       BlockManager blockManager,
       TaskMemoryManager memoryManager,
       SerializedShuffleHandle<K, V> handle,
@@ -137,7 +137,7 @@ public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> {
       (int) (long) sparkConf.get(package$.MODULE$.SHUFFLE_SORT_INIT_BUFFER_SIZE());
     this.inputBufferSizeInBytes =
       (int) (long) sparkConf.get(package$.MODULE$.SHUFFLE_FILE_BUFFER_SIZE()) * 1024;
-    open();
+    open(); // SSY open sorter
   }
 
   private void updatePeakMemoryUsed() {
@@ -198,7 +198,7 @@ public class UnsafeShuffleWriter<K, V> extends ShuffleWriter<K, V> {
 
   private void open() {
     assert (sorter == null);
-    sorter = new ShuffleExternalSorter(
+    sorter = new ShuffleExternalSorter( // SSY passing in memoryManager to this MemoryConsumer extended class
       memoryManager,
       blockManager,
       taskContext,

@@ -112,8 +112,8 @@ public abstract class MemoryConsumer {
    *
    * @throws SparkOutOfMemoryError
    */
-  protected MemoryBlock allocatePage(long required) {
-    MemoryBlock page = taskMemoryManager.allocatePage(Math.max(pageSize, required), this);
+  protected MemoryBlock allocatePage(long required) { // SSY called from core/src/main/java/org/apache/spark/shuffle/sort/ShuffleExternalSorter.java acquireNewPageIfNecessary
+    MemoryBlock page = taskMemoryManager.allocatePage(Math.max(pageSize, required), this); // SSY this may use off heap memory
     if (page == null || page.size() < required) {
       throwOom(page, required);
     }

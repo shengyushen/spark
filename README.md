@@ -1,10 +1,17 @@
+starting up master and workers
+	./sbin/start-all.sh
+		core/src/main/scala/org/apache/spark/deploy/master/Master.scala 
+		./core/src/main/scala/org/apache/spark/deploy/worker/Worker.scala
+		
+
 invoking script 
 ../HiBench/bin/workloads/micro/wordcount/spark/run.sh
 1 bin/spark-submit
 	1.1 bin/spark-class
 		1.1.1 ./launcher/src/main/java/org/apache/spark/launcher/Main.java to build cmd
-		1.1.2 ./core/src/main/scala/org/apache/spark/deploy/SparkSubmit.scala  line  944
-2 ../HiBench/sparkbench/micro/src/main/scala/com/intel/sparkbench/micro/ScalaWordCount.scala
+		1.1.2 ./core/src/main/scala/org/apache/spark/deploy/SparkSubmit.scala to launch app
+2 ../HiBench/sparkbench/micro/src/main/scala/com/intel/sparkbench/micro/ScalaWordCount.scala until here we are still at master
+
 	2.1 ../spark/core/src/main/scala/org/apache/spark/rdd/RDD.scala 
 			core/src/main/scala/org/apache/spark/rdd/PairRDDFunctions.scala define additional functions for RDD with implicit linking
 			core/src/main/scala/org/apache/spark/rdd/MapPartitionsRDD.scala define implimentation of functions such as compute
@@ -13,12 +20,27 @@ invoking script
 			./core/src/main/scala/org/apache/spark/SparkContext.scala
 			./core/src/main/scala/org/apache/spark/SparkEnv.scala
 
-			./core/src/main/scala/org/apache/spark/executor/Executor.scala
 			./core/src/main/scala/org/apache/spark/scheduler/Stage.scala
 			./core/src/main/scala/org/apache/spark/rdd/HadoopRDD.scala
-			./core/src/main/scala/org/apache/spark/scheduler/Task.scala
 			./core/src/main/scala/org/apache/spark/shuffle/ShuffleWriteProcessor.scala
+
+
+
+instancing all managers ./core/src/main/scala/org/apache/spark/SparkEnv.scala
 			./core/src/main/scala/org/apache/spark/storage/BlockManager.scala
+					all sorts of storage that take care of put and get
+					core/src/main/scala/org/apache/spark/storage/memory/MemoryStore.scala 
+					core/src/main/scala/org/apache/spark/storage/DiskStore.scala 
+./core/src/main/java/org/apache/spark/memory/TaskMemoryManager.java
+			./core/src/main/scala/org/apache/spark/memory/MemoryManager.scala instancing all MemoryPools to controll all quota of all tasks
+			./core/src/main/scala/org/apache/spark/memory/UnifiedMemoryManager.scala
+
+	
+			./core/src/main/scala/org/apache/spark/executor/Executor.scala
+			run tasks
+			./core/src/main/scala/org/apache/spark/scheduler/Task.scala
+		
+				
 
 all sorts of RDD
 
@@ -45,6 +67,16 @@ sql/core/src/main/scala/org/apache/spark/sql/execution/datasources/v2/DataSource
 sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/continuous/ContinuousDataSourceRDD.scala
 sql/core/src/main/scala/org/apache/spark/sql/execution/streaming/state/StateStoreRDD.scala
 streaming/src/main/scala/org/apache/spark/streaming/rdd/WriteAheadLogBackedBlockRDD.scala
+
+
+
+SQL
+examples/src/main/scala/org/apache/spark/examples/sql/streaming/StructuredKafkaWordCount.scala
+
+
+tungsten project:
+https://databricks.com/blog/2015/04/28/project-tungsten-bringing-spark-closer-to-bare-metal.html
+llvm compilation : https://databricks.com/blog/2016/05/23/apache-spark-as-a-compiler-joining-a-billion-rows-per-second-on-a-laptop.html
 
 
 # Apache Spark

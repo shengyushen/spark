@@ -36,7 +36,7 @@ private[spark] trait SparkApplication {
  * Configuration is propagated to the application via system properties, so running multiple
  * of these in the same JVM may lead to undefined behavior due to configuration leaks.
  */
-// SSY this define the Java's SparkApplication
+// SSY call the main method of the class
 private[deploy] class JavaMainApplication(klass: Class[_]) extends SparkApplication {
 
   override def start(args: Array[String], conf: SparkConf): Unit = {

@@ -84,10 +84,10 @@ private[sql] object Dataset {
     }
     dataset
   }
-
+	// SSY sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
   def ofRows(sparkSession: SparkSession, logicalPlan: LogicalPlan): DataFrame =
     sparkSession.withActive {
-      val qe = sparkSession.sessionState.executePlan(logicalPlan)
+      val qe = sparkSession.sessionState.executePlan(logicalPlan) // SSY this will create new QueryExecution
       qe.assertAnalyzed()
       new Dataset[Row](qe, RowEncoder(qe.analyzed.schema))
   }
@@ -244,7 +244,7 @@ class Dataset[T] private[sql](
    * it when constructing new Dataset objects that have the same object type (that will be
    * possibly resolved to a different schema).
    */
-  private[sql] implicit val exprEnc: ExpressionEncoder[T] = encoderFor(encoder)
+  private[sql] implicit val exprEnc: ExpressionEncoder[T] = encoderFor(encoder) // SSY encoder come from Dataset argument
 
   // The resolved `ExpressionEncoder` which can be used to turn rows to objects of type T, after
   // collecting rows to the driver side.
@@ -1397,7 +1397,7 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   def as(alias: String): Dataset[T] = withTypedPlan {
-    SubqueryAlias(alias, logicalPlan)
+    SubqueryAlias(alias, logicalPlan) // SSY this is the query processing layer
   }
 
   /**
@@ -1486,7 +1486,7 @@ class Dataset[T] private[sql](
    * @since 2.0.0
    */
   @scala.annotation.varargs
-  def selectExpr(exprs: String*): DataFrame = {
+  def selectExpr(exprs: String*): DataFrame = { // SSY sql/core/src/main/scala/org/apache/spark/sql/package.scala
     select(exprs.map { expr =>
       Column(sparkSession.sessionState.sqlParser.parseExpression(expr))
     }: _*)
@@ -1737,7 +1737,7 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   def reduce(func: (T, T) => T): T = withNewRDDExecutionId {
-    rdd.reduce(func)
+    rdd.reduce(func) // SSY rdd is defined below
   }
 
   /**
@@ -2778,7 +2778,7 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   def mapPartitions[U : Encoder](func: Iterator[T] => Iterator[U]): Dataset[U] = {
-    new Dataset[U](
+    new Dataset[U]( // SSY creating a chain of operation
       sparkSession,
       MapPartitions[T, U](func, logicalPlan),
       implicitly[Encoder[U]])
@@ -2793,7 +2793,7 @@ class Dataset[T] private[sql](
    */
   def mapPartitions[U](f: MapPartitionsFunction[T, U], encoder: Encoder[U]): Dataset[U] = {
     val func: (Iterator[T]) => Iterator[U] = x => f.call(x.asJava).asScala
-    mapPartitions(func)(encoder)
+    mapPartitions(func)(encoder) //SSY defined above
   }
 
   /**
@@ -2837,6 +2837,7 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   def flatMap[U : Encoder](func: T => TraversableOnce[U]): Dataset[U] =
+		// SSY mapPartitions defined above
     mapPartitions(_.flatMap(func))
 
   /**
@@ -2978,7 +2979,7 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   def count(): Long = withAction("count", groupBy().count().queryExecution) { plan =>
-    plan.executeCollect().head.getLong(0)
+    plan.executeCollect().head.getLong(0) // SSY 
   }
 
   /**
@@ -3208,7 +3209,12 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   lazy val rdd: RDD[T] = {
+		//SSY exprEnc is ExpressionEncoder
+		// SSY deserializer is Expression sql/catalyst/src/main/scala/org/apache/spark/sql/catalyst/expressions/Expression.scala
     val objectType = exprEnc.deserializer.dataType
+		//SSY rddQueryExecution is QueryExecution 
+		// toRdd will finally get SQLExecutionRDD extending RDD
+		// finally return to RDD
     rddQueryExecution.toRdd.mapPartitions { rows =>
       rows.map(_.get(0, objectType).asInstanceOf[T])
     }
@@ -3377,12 +3383,13 @@ class Dataset[T] private[sql](
    * @group basic
    * @since 2.0.0
    */
+	// SSY sql/core/src/main/scala/org/apache/spark/sql/streaming/DataStreamWriter.scala
   def writeStream: DataStreamWriter[T] = {
     if (!isStreaming) {
       logicalPlan.failAnalysis(
         "'writeStream' can be called only on streaming Dataset/DataFrame")
     }
-    new DataStreamWriter[T](this)
+    new DataStreamWriter[T](this) // SSY still a graph creation
   }
 
 

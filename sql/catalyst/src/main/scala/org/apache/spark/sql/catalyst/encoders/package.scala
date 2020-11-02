@@ -27,7 +27,7 @@ package object encoders {
    * object type is being bound by name or by ordinal when doing resolution.
    */
   def encoderFor[A : Encoder]: ExpressionEncoder[A] = implicitly[Encoder[A]] match {
-    case e: ExpressionEncoder[A] =>
+    case e: ExpressionEncoder[A] => // SSY asserting it is must be ExpressionEncoder
       e.assertUnresolved()
       e
     case _ => sys.error(s"Only expression encoders are supported today")

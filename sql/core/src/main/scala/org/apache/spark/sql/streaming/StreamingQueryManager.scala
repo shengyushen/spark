@@ -346,7 +346,8 @@ class StreamingQueryManager private[sql] (sparkSession: SparkSession) extends Lo
       recoverFromCheckpointLocation: Boolean = true,
       trigger: Trigger = Trigger.ProcessingTime(0),
       triggerClock: Clock = new SystemClock()): StreamingQuery = {
-    val query = createQuery(
+		// SSY create only, real start below
+    val query = createQuery( // SSY StreamingQueryWrapper wrapping ContinuousExecution or MicroBatchExecution
       userSpecifiedName,
       userSpecifiedCheckpointLocation,
       df,
@@ -413,12 +414,12 @@ class StreamingQueryManager private[sql] (sparkSession: SparkSession) extends Lo
       activeQueries.put(query.id, query)
     }
 
-    try {
+    try { // SSY real start
       // When starting a query, it will call `StreamingQueryListener.onQueryStarted` synchronously.
       // As it's provided by the user and can run arbitrary codes, we must not hold any lock here.
       // Otherwise, it's easy to cause dead-lock, or block too long if the user codes take a long
       // time to finish.
-      query.streamingQuery.start()
+      query.streamingQuery.start() // SSY streamingQuery extract the wrapped ContinuousExecution or MicroBatchExecution with base class StreamExecution with start function
     } catch {
       case e: Throwable =>
         unregisterTerminatedStream(query)

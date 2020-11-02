@@ -204,9 +204,11 @@ private[spark] class StandaloneSchedulerBackend(
   protected override def doRequestTotalExecutors(
       resourceProfileToTotalExecs: Map[ResourceProfile, Int]): Future[Boolean] = {
     // resources profiles not supported
+		// SSY client is StandaloneAppClient
     Option(client) match {
       case Some(c) =>
         val numExecs = resourceProfileToTotalExecs.getOrElse(defaultProf, 0)
+				// SSY request to StandaloneAppClient
         c.requestTotalExecutors(numExecs)
       case None =>
         logWarning("Attempted to request executors before driver fully initialized.")

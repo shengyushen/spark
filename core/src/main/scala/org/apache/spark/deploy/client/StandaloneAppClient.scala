@@ -53,7 +53,7 @@ private[spark] class StandaloneAppClient(
 
   private val REGISTRATION_TIMEOUT_SECONDS = 20
   private val REGISTRATION_RETRIES = 3
-
+	// SSY core/src/main/scala/org/apache/spark/rpc/RpcEndpointRef.scala
   private val endpoint = new AtomicReference[RpcEndpointRef]
   private val appId = new AtomicReference[String]
   private val registered = new AtomicBoolean(false)
@@ -275,6 +275,8 @@ private[spark] class StandaloneAppClient(
 
   def start(): Unit = {
     // Just launch an rpcEndpoint; it will call back into the listener.
+		// SSY this just send message into listener, what to do is decided by the message content
+		// SSY rpcEnv is NettyRpcEnv, setupEndpoint return NettyRpcEndpointRef
     endpoint.set(rpcEnv.setupEndpoint("AppClient", new ClientEndpoint(rpcEnv)))
   }
 
@@ -297,8 +299,11 @@ private[spark] class StandaloneAppClient(
    *
    * @return whether the request is acknowledged.
    */
+	// SSY seems to called from driver to master
   def requestTotalExecutors(requestedTotal: Int): Future[Boolean] = {
     if (endpoint.get != null && appId.get != null) {
+			// SSY get is inside endpoint
+			// it is now NettyRpcEndpointRef
       endpoint.get.ask[Boolean](RequestExecutors(appId.get, requestedTotal))
     } else {
       logWarning("Attempted to request executors before driver fully initialized.")

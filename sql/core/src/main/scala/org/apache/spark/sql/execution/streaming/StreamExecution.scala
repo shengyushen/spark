@@ -242,7 +242,7 @@ abstract class StreamExecution(
         // To fix call site like "run at <unknown>:0", we bridge the call site from the caller
         // thread to this micro batch thread
         sparkSession.sparkContext.setCallSite(callSite)
-        runStream()
+        runStream() //SSY runStream defined below
       }
     }
 
@@ -278,10 +278,10 @@ abstract class StreamExecution(
    * Starts the execution. This returns only after the thread has started and [[QueryStartedEvent]]
    * has been posted to all the listeners.
    */
-  def start(): Unit = {
+  def start(): Unit = { //SSY of StreamExecution 
     logInfo(s"Starting $prettyIdString. Use $resolvedCheckpointRoot to store the query checkpoint.")
     queryExecutionThread.setDaemon(true)
-    queryExecutionThread.start()
+    queryExecutionThread.start() //SSY defined above of QueryExecutionThread, its start actually come from base class Thread
     startLatch.await()  // Wait until thread started and QueryStart event has been posted
   }
 
@@ -319,7 +319,7 @@ abstract class StreamExecution(
 
       updateStatusMessage("Initializing sources")
       // force initialization of the logical plan so that the sources can be created
-      logicalPlan
+      logicalPlan //SSY where is this come from?
 
       // Adaptive execution can change num shuffle partitions, disallow
       sparkSessionForStream.conf.set(SQLConf.ADAPTIVE_EXECUTION_ENABLED.key, "false")

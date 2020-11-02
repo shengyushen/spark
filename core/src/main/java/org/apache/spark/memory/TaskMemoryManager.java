@@ -156,15 +156,15 @@ public class TaskMemoryManager {
         // which is just spilled in last few times and re-spilling on it will produce many small
         // spill files.
         TreeMap<Long, List<MemoryConsumer>> sortedConsumers = new TreeMap<>();
-        for (MemoryConsumer c: consumers) {
+        for (MemoryConsumer c: consumers) { // SSY for all consumers
           if (c != consumer && c.getUsed() > 0 && c.getMode() == mode) {
-            long key = c.getUsed();
+            long key = c.getUsed(); // find used key
             List<MemoryConsumer> list =
-                sortedConsumers.computeIfAbsent(key, k -> new ArrayList<>(1));
+                sortedConsumers.computeIfAbsent(key, k -> new ArrayList<>(1)); // SSY add key's association into sortedConsumers
             list.add(c);
           }
         }
-        while (!sortedConsumers.isEmpty()) {
+        while (!sortedConsumers.isEmpty()) { //SSY it is 
           // Get the consumer using the least memory more than the remaining required memory.
           Map.Entry<Long, List<MemoryConsumer>> currentEntry =
             sortedConsumers.ceilingEntry(required - got);
@@ -176,11 +176,11 @@ public class TaskMemoryManager {
           List<MemoryConsumer> cList = currentEntry.getValue();
           MemoryConsumer c = cList.get(cList.size() - 1);
           try {
-            long released = c.spill(required - got, consumer);
+            long released = c.spill(required - got, consumer); // SSY let MemoryConsumer to spill
             if (released > 0) {
               logger.debug("Task {} released {} from {} for {}", taskAttemptId,
                 Utils.bytesToString(released), c, consumer);
-              got += memoryManager.acquireExecutionMemory(required - got, taskAttemptId, mode);
+              got += memoryManager.acquireExecutionMemory(required - got, taskAttemptId, mode); // SSY calling UnifiedMemoryManager's acquireExecutionMemory
               if (got >= required) {
                 break;
               }
@@ -226,7 +226,7 @@ public class TaskMemoryManager {
         }
       }
 
-      consumers.add(consumer);
+      consumers.add(consumer); // SSY adding new consumer
       logger.debug("Task {} acquired {} for {}", taskAttemptId, Utils.bytesToString(got), consumer);
       return got;
     }
@@ -281,6 +281,14 @@ public class TaskMemoryManager {
    *
    * @throws TooLargePageException
    */
+	// SSY seems to be in MemoryConsumer
+	// core/src/main/java/org/apache/spark/memory/MemoryConsumer.java
+	// following extend MemoryConsumer
+	// core/src/main/java/org/apache/spark/unsafe/map/BytesToBytesMap.java
+	// core/src/main/java/org/apache/spark/util/collection/unsafe/sort/UnsafeExternalSorter.java
+	// core/src/main/java/org/apache/spark/shuffle/sort/ShuffleExternalSorter.java 
+	// and lots of shuffler sorter included MemoryConsumer
+	// all these call TaskMemoryManager's allocatePage when doing shuffle
   public MemoryBlock allocatePage(long size, MemoryConsumer consumer) {
     assert(consumer != null);
     assert(consumer.getMode() == tungstenMemoryMode);
@@ -305,7 +313,7 @@ public class TaskMemoryManager {
     }
     MemoryBlock page = null;
     try {
-      page = memoryManager.tungstenMemoryAllocator().allocate(acquired);
+      page = memoryManager.tungstenMemoryAllocator().allocate(acquired); // SSY calling the allocator's allocate, this is real allocation both on and off heap
     } catch (OutOfMemoryError e) {
       logger.warn("Failed to allocate a page ({} bytes), try again.", acquired);
       // there is no enough memory actually, it means the actual free memory is smaller than

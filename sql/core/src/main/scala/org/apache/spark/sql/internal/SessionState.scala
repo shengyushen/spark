@@ -113,7 +113,7 @@ private[sql] class SessionState(
   //  Helper methods, partially leftover from pre-2.0 days
   // ------------------------------------------------------
 
-  def executePlan(plan: LogicalPlan): QueryExecution = createQueryExecution(plan)
+  def executePlan(plan: LogicalPlan): QueryExecution = createQueryExecution(plan) // SSY createQueryExecution is passed in class creation above
 
   def refreshTable(tableName: String): Unit = {
     catalog.refreshTable(sqlParser.parseTableIdentifier(tableName))

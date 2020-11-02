@@ -308,7 +308,9 @@ case class ExpressionEncoder[T](
   /**
    * Returns true if the type `T` is serialized as a struct by `objSerializer`.
    */
-  def isSerializedAsStruct: Boolean = objSerializer.dataType.isInstanceOf[StructType]
+	// SSY objSerializer is member of class
+  def isSerializedAsStruct: Boolean = objSerializer.dataType.isInstanceOf[StructType] // SSY StructType sql/catalyst/src/main/scala/org/apache/spark/sql/types/StructType.scala
+	// StructType is constructed with StructFields
 
   /**
    * If the type `T` is serialized as a struct, when it is encoded to a Spark SQL row, fields in

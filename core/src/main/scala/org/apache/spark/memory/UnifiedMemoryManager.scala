@@ -48,14 +48,14 @@ import org.apache.spark.storage.BlockId
  */
 private[spark] class UnifiedMemoryManager( // SSY this is the default one , but no actual memory here, which is in MemoryManager
     conf: SparkConf,
-    val maxHeapMemory: Long,
+    val maxHeapMemory: Long, // SSY max memory size
     onHeapStorageRegionSize: Long,
     numCores: Int)
   extends MemoryManager(
     conf,
     numCores,
     onHeapStorageRegionSize,
-    maxHeapMemory - onHeapStorageRegionSize) {
+    maxHeapMemory - onHeapStorageRegionSize) { // SSY further setting size of storage and execution
 
   private def assertInvariants(): Unit = { 
 		// SSY these pools in core/src/main/scala/org/apache/spark/memory/MemoryManager.scala 
@@ -91,7 +91,7 @@ private[spark] class UnifiedMemoryManager( // SSY this is the default one , but 
     assert(numBytes >= 0)
     val (executionPool, storagePool, storageRegionSize, maxMemory) = memoryMode match {
       case MemoryMode.ON_HEAP => (
-        onHeapExecutionMemoryPool,
+        onHeapExecutionMemoryPool, // SSY defined in MemoryManager base class
         onHeapStorageMemoryPool,
         onHeapStorageRegionSize,
         maxHeapMemory)
@@ -146,7 +146,7 @@ private[spark] class UnifiedMemoryManager( // SSY this is the default one , but 
     def computeMaxExecutionPoolSize(): Long = {
       maxMemory - math.min(storagePool.memoryUsed, storageRegionSize)
     }
-
+		// SSY core/src/main/scala/org/apache/spark/memory/ExecutionMemoryPool.scala
     executionPool.acquireMemory( // SSY acquireMemory of executionPool that need external allocator maybeGrowExecutionPool
       numBytes, taskAttemptId, maybeGrowExecutionPool, () => computeMaxExecutionPoolSize)
   }

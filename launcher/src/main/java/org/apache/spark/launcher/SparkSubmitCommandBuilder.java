@@ -126,7 +126,8 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
 
     if (args.size() > 0) {
       switch (args.get(0)) {
-        // SSY calling spark-submit PYSPARK_SHELL  and so on
+        // SSY what is the first class? it is SparkSubmit in my case, so nothing matched here
+				// appResource is null
         case PYSPARK_SHELL:
           this.allowsMixedArguments = true;
           appResource = PYSPARK_SHELL;
@@ -162,7 +163,7 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
       return buildPySparkShellCommand(env);
     } else if (SPARKR_SHELL.equals(appResource) && !isSpecialCommand) {
       return buildSparkRCommand(env);
-    } else {
+    } else { // SSY appResource is null goto here to SparkSubmit
       return buildSparkSubmitCommand(env);
     }
   }
@@ -250,7 +251,7 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
 
     return args;
   }
-
+	//SSY real place to buld command
   private List<String> buildSparkSubmitCommand(Map<String, String> env)
       throws IOException, IllegalArgumentException {
     // Load the properties file and check whether spark-submit will be running the app's driver
@@ -260,7 +261,7 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
     boolean isClientMode = isClientMode(config);
     String extraClassPath = isClientMode ? config.get(SparkLauncher.DRIVER_EXTRA_CLASSPATH) : null;
 
-    List<String> cmd = buildJavaCommand(extraClassPath);
+    List<String> cmd = buildJavaCommand(extraClassPath); // SSY basic java command with options
     // Take Thrift Server as daemon
     if (isThriftServer(mainClass)) {
       addOptionString(cmd, System.getenv("SPARK_DAEMON_JAVA_OPTS"));
@@ -294,7 +295,7 @@ class SparkSubmitCommandBuilder extends AbstractCommandBuilder {
         config.get(SparkLauncher.DRIVER_EXTRA_LIBRARY_PATH));
     }
 
-    cmd.add("org.apache.spark.deploy.SparkSubmit");
+    cmd.add("org.apache.spark.deploy.SparkSubmit"); // SSY still with SparkSubmit
     cmd.addAll(buildSparkSubmitArgs());
     return cmd;
   }

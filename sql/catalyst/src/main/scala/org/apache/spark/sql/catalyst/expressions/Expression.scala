@@ -210,7 +210,7 @@ abstract class Expression extends TreeNode[Expression] {
    * Returns the [[DataType]] of the result of evaluating this expression.  It is
    * invalid to query the dataType of an unresolved expression (i.e., when `resolved` == false).
    */
-  def dataType: DataType
+  def dataType: DataType // SSY this is for Expression
 
   /**
    * Returns true if  all the children of this expression have been resolved to a specific schema

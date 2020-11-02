@@ -25,6 +25,7 @@ fi
 
 # NOTE: This exact class name is matched downstream by SparkSubmit.
 # Any changes need to be reflected there.
+# SSY master class on master node ./core/src/main/scala/org/apache/spark/deploy/master/Master.scala
 CLASS="org.apache.spark.deploy.master.Master"
 
 if [[ "$@" = *--help ]] || [[ "$@" = *-h ]]; then
@@ -33,7 +34,7 @@ if [[ "$@" = *--help ]] || [[ "$@" = *-h ]]; then
   pattern+="\|Using Spark's default log4j profile:"
   pattern+="\|Started daemon with process name"
   pattern+="\|Registered signal handler for"
-
+  # SSY bin/spark-class this is for error handling
   "${SPARK_HOME}"/bin/spark-class $CLASS --help 2>&1 | grep -v "$pattern" 1>&2
   exit 1
 fi
@@ -62,7 +63,8 @@ fi
 if [ "$SPARK_MASTER_WEBUI_PORT" = "" ]; then
   SPARK_MASTER_WEBUI_PORT=8080
 fi
-
+# SSY start master here sbin/spark-daemon.sh
+# CLASS is the name
 "${SPARK_HOME}/sbin"/spark-daemon.sh start $CLASS 1 \
   --host $SPARK_MASTER_HOST --port $SPARK_MASTER_PORT --webui-port $SPARK_MASTER_WEBUI_PORT \
   $ORIGINAL_ARGS

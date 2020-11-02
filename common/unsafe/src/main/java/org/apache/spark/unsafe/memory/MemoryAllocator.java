@@ -38,7 +38,7 @@ public interface MemoryAllocator {
 
   void free(MemoryBlock memory);
 
-  MemoryAllocator UNSAFE = new UnsafeMemoryAllocator();
+  MemoryAllocator UNSAFE = new UnsafeMemoryAllocator(); // SSY using Platform allocation functions
 
-  MemoryAllocator HEAP = new HeapMemoryAllocator();
+  MemoryAllocator HEAP = new HeapMemoryAllocator(); // on heap is also byte buffers
 }

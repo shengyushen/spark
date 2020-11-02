@@ -227,10 +227,10 @@ private[spark] class ExecutorAllocationManager(
     listenerBus.addToManagementQueue(executorMonitor)
     cleaner.foreach(_.attachListener(executorMonitor))
 
-    val scheduleTask = new Runnable() {
+    val scheduleTask = new Runnable() { // SSY to be periodic run 
       override def run(): Unit = {
         try {
-          schedule()
+          schedule() // SSY remove time out executor
         } catch {
           case ct: ControlThrowable =>
             throw ct
@@ -247,7 +247,10 @@ private[spark] class ExecutorAllocationManager(
       val numLocality = numLocalityAwareTasksPerResourceProfileId.toMap
       (numTarget, numLocality)
     }
-
+		// core/src/main/scala/org/apache/spark/SparkContext.scala
+		// core/src/main/scala/org/apache/spark/deploy/client/StandaloneAppClient.scala
+		// core/src/main/scala/org/apache/spark/scheduler/cluster/CoarseGrainedSchedulerBackend.scala
+		// SSY not all backend extend to ExecutorAllocationClient, only StandaloneSchedulerBackend to CoarseGrainedSchedulerBackend to ExecutorAllocationClient
     client.requestTotalExecutors(numExecutorsTarget, numLocalityAware, rpIdToHostToLocalTaskCount)
   }
 
@@ -357,9 +360,9 @@ private[spark] class ExecutorAllocationManager(
           // the target number in case an executor just happens to get lost (eg., bad hardware,
           // or the cluster manager preempts it) -- in that case, there is no point in trying
           // to immediately  get a new executor, since we wouldn't even use it yet.
-          decrementExecutorsFromTarget(maxNeeded, rpId, updatesNeeded)
+          decrementExecutorsFromTarget(maxNeeded, rpId, updatesNeeded) // SSY reduce target number
         } else if (addTime != NOT_SET && now >= addTime) {
-          addExecutorsToTarget(maxNeeded, rpId, updatesNeeded)
+          addExecutorsToTarget(maxNeeded, rpId, updatesNeeded) // SSY increase target number
         }
       }
       doUpdateRequest(updatesNeeded.toMap, now)
@@ -545,7 +548,8 @@ private[spark] class ExecutorAllocationManager(
     }
 
     // Send a request to the backend to kill this executor(s)
-    val executorsRemoved = if (testing) {
+		// SSY call the backend to kill expired executors
+    val executorsRemoved = if (testing) { // SSY just for testing, not for real running
       executorIdsToBeRemoved
     } else {
       // We don't want to change our target number of executors, because we already did that

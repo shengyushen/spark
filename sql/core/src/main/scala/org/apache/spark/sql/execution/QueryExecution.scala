@@ -50,7 +50,7 @@ import org.apache.spark.util.Utils
  * changing them, because a lot of developers use the feature for debugging.
  */
 class QueryExecution(
-    val sparkSession: SparkSession,
+    val sparkSession: SparkSession, // SSY sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
     val logical: LogicalPlan,
     val tracker: QueryPlanningTracker = new QueryPlanningTracker) extends Logging {
 

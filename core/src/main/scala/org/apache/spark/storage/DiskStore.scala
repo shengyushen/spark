@@ -57,18 +57,18 @@ private[spark] class DiskStore(
    *
    * @throws IllegalStateException if the block already exists in the disk store.
    */
-  def put(blockId: BlockId)(writeFunc: WritableByteChannel => Unit): Unit = {
+  def put(blockId: BlockId)(writeFunc: WritableByteChannel => Unit): Unit = { // SSY no special allocation 
     if (contains(blockId)) {
       throw new IllegalStateException(s"Block $blockId is already present in the disk store")
     }
     logDebug(s"Attempting to put block $blockId")
     val startTimeNs = System.nanoTime()
-    val file = diskManager.getFile(blockId)
-    val out = new CountingWritableChannel(openForWrite(file))
+    val file = diskManager.getFile(blockId) // SSY haha geting filename
+    val out = new CountingWritableChannel(openForWrite(file)) //SSY the writing channel
     var threwException: Boolean = true
     try {
-      writeFunc(out)
-      blockSizes.put(blockId, out.getCount)
+      writeFunc(out) // SSY the function to write
+      blockSizes.put(blockId, out.getCount) // SSY only the block size
       threwException = false
     } finally {
       try {
@@ -90,7 +90,7 @@ private[spark] class DiskStore(
   }
 
   def putBytes(blockId: BlockId, bytes: ChunkedByteBuffer): Unit = {
-    put(blockId) { channel =>
+    put(blockId) { channel => // SSY calling put
       bytes.writeFully(channel)
     }
   }

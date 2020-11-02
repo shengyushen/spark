@@ -204,7 +204,7 @@ private[spark] class SerializerManager(
   def dataDeserializeStream[T](
       blockId: BlockId,
       inputStream: InputStream)
-      (classTag: ClassTag[T]): Iterator[T] = {
+      (classTag: ClassTag[T]): Iterator[T] = { // SSY note that it return an Iterator instead of value
     val stream = new BufferedInputStream(inputStream)
     val autoPick = !blockId.isInstanceOf[StreamBlockId]
     getSerializer(classTag, autoPick)

@@ -31,7 +31,7 @@ import org.apache.spark.sql.internal.SQLConf
  * @param conf the `SQLConf` to apply to the execution of the SQL plan
  */
 class SQLExecutionRDD(
-    var sqlRDD: RDD[InternalRow], @transient conf: SQLConf) extends RDD[InternalRow](sqlRDD) {
+    var sqlRDD: RDD[InternalRow], @transient conf: SQLConf) extends RDD[InternalRow](sqlRDD) {// SSY RDD core/src/main/scala/org/apache/spark/rdd/RDD.scala
   private val sqlConfigs = conf.getAllConfs
   private lazy val sqlConfExecutorSide = {
     val newConf = new SQLConf()

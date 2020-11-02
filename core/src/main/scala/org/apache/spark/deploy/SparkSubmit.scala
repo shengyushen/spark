@@ -83,13 +83,13 @@ private[spark] class SparkSubmit extends Logging {
     // be reset before the application starts.
     val uninitLog = initializeLogIfNecessary(true, silent = true)
 
-    val appArgs = parseArguments(args)
+    val appArgs = parseArguments(args) // SSY get action below
     if (appArgs.verbose) {
       logInfo(appArgs.toString)
     }
     appArgs.action match {
       // SSY submit a job
-      case SparkSubmitAction.SUBMIT => submit(appArgs, uninitLog)
+      case SparkSubmitAction.SUBMIT => submit(appArgs, uninitLog) // SSY submit
       case SparkSubmitAction.KILL => kill(appArgs)
       case SparkSubmitAction.REQUEST_STATUS => requestStatus(appArgs)
       case SparkSubmitAction.PRINT_VERSION => printVersion()
@@ -899,7 +899,7 @@ private[spark] class SparkSubmit extends Logging {
       addJarToClasspath(jar, loader)
     }
 
-    var mainClass: Class[_] = null
+    var mainClass: Class[_] = null // SSY the ScalaWordCount
 
     try {
       mainClass = Utils.classForName(childMainClass)
@@ -939,13 +939,7 @@ private[spark] class SparkSubmit extends Logging {
     try {
       // SSY 1.1.2.6 real start
       // app is a trait (virtual) SparkApplication in core/src/main/scala/org/apache/spark/deploy/SparkApplication.scala
-      // core/src/main/scala/org/apache/spark/deploy/Client.scala
-			// SSYSSYSSY this define core/src/main/scala/org/apache/spark/deploy/SparkApplication.scala
-			// core/src/main/scala/org/apache/spark/deploy/rest/RestSubmissionClient.scala
-			// core/src/test/scala/org/apache/spark/deploy/SparkSubmitSuite.scala
-			// resource-managers/kubernetes/core/src/main/scala/org/apache/spark/deploy/k8s/submit/KubernetesClientApplication.scala
-			// resource-managers/yarn/src/main/scala/org/apache/spark/deploy/yarn/Client.scala
-      app.start(childArgs.toArray, sparkConf)
+      app.start(childArgs.toArray, sparkConf) // SSY calling start in JavaMainApplication to invoke main of ScalaWordCount
     } catch {
       case t: Throwable =>
         throw findCause(t)
@@ -1003,7 +997,7 @@ object SparkSubmit extends CommandLineUtils with Logging {
     "org.apache.spark.deploy.k8s.submit.KubernetesClientApplication"
 
   override def main(args: Array[String]): Unit = {
-    val submit = new SparkSubmit() {
+    val submit = new SparkSubmit() { // SSY similar to main above
       self =>
 
       override protected def parseArguments(args: Array[String]): SparkSubmitArguments = {
@@ -1033,7 +1027,7 @@ object SparkSubmit extends CommandLineUtils with Logging {
 
     }
 
-    submit.doSubmit(args)
+    submit.doSubmit(args) // SSY real entry point
   }
 
   /**

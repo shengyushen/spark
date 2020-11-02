@@ -61,7 +61,7 @@ import org.apache.spark.util.io.ChunkedByteBuffer
 private[spark] class Executor(
     executorId: String,
     executorHostname: String,
-    env: SparkEnv,
+    env: SparkEnv, // SSY some one create it here
     userClassPath: Seq[URL] = Nil,
     isLocal: Boolean = false,
     uncaughtExceptionHandler: UncaughtExceptionHandler = new SparkUncaughtExceptionHandler,
@@ -604,7 +604,13 @@ private[spark] class Executor(
 
         executorSource.SUCCEEDED_TASKS.inc(1L)
         setTaskFinishedAndClearInterruptStatus()
-				// SSY send back result to core/src/main/scala/org/apache/spark/scheduler/TaskSchedulerImpl.scala
+				// SSY empty one core/src/main/scala/org/apache/spark/executor/ExecutorBackend.scala
+				// core/src/main/scala/org/apache/spark/executor/CoarseGrainedExecutorBackend.scala
+				// core/src/main/scala/org/apache/spark/scheduler/local/LocalSchedulerBackend.scala
+				// resource-managers/mesos/src/main/scala/org/apache/spark/executor/MesosExecutorBackend.scala
+				// resource-managers/mesos/src/main/scala/org/apache/spark/scheduler/cluster/mesos/MesosClusterScheduler.scala
+				// resource-managers/mesos/src/main/scala/org/apache/spark/scheduler/cluster/mesos/MesosCoarseGrainedSchedulerBackend.scala
+				// resource-managers/mesos/src/main/scala/org/apache/spark/scheduler/cluster/mesos/MesosFineGrainedSchedulerBackend.scala
         execBackend.statusUpdate(taskId, TaskState.FINISHED, serializedResult)
       } catch {
         case t: TaskKilledException =>

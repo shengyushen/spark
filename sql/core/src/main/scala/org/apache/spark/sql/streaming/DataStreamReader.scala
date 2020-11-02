@@ -185,7 +185,7 @@ final class DataStreamReader private[sql](sparkSession: SparkSession) extends Lo
    *
    * @since 2.0.0
    */
-  def load(): DataFrame = {
+  def load(): DataFrame = { // SSY this will use source from format("kafka") sql/core/src/main/scala/org/apache/spark/sql/package.scala defined to Dataset
     if (source.toLowerCase(Locale.ROOT) == DDLUtils.HIVE_PROVIDER) {
       throw new AnalysisException("Hive data source can only be used with tables, you can not " +
         "read files of Hive data source directly.")

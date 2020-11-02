@@ -26,7 +26,7 @@ public class UnsafeMemoryAllocator implements MemoryAllocator {
 
   @Override
   public MemoryBlock allocate(long size) throws OutOfMemoryError {
-    long address = Platform.allocateMemory(size);
+    long address = Platform.allocateMemory(size); // SSY using Platform functions, which is also spark built in function
     MemoryBlock memory = new MemoryBlock(null, address, size);
     if (MemoryAllocator.MEMORY_DEBUG_FILL_ENABLED) {
       memory.fill(MemoryAllocator.MEMORY_DEBUG_FILL_CLEAN_VALUE);

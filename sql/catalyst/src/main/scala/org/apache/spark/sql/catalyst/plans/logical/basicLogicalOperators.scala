@@ -564,7 +564,7 @@ case class Aggregate(
     groupingExpressions: Seq[Expression],
     aggregateExpressions: Seq[NamedExpression],
     child: LogicalPlan)
-  extends UnaryNode {
+  extends UnaryNode { // SSY extended class of LogicalPlan
 
   override lazy val resolved: Boolean = {
     val hasWindowExpressions = aggregateExpressions.exists ( _.collect {

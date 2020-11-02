@@ -78,13 +78,13 @@ import org.apache.spark.util.logging.DriverLogger
  * @param config a Spark Config object describing the application configuration. Any settings in
  *   this config overrides the default configs as well as system properties.
  */
-class SparkContext(config: SparkConf) extends Logging {
+class SparkContext(config: SparkConf) extends Logging { // SSY only on the master or driver
 
   // The call site where this SparkContext was constructed.
   private val creationSite: CallSite = Utils.getCallSite()
 
   // In order to prevent SparkContext from being created in executors.
-  SparkContext.assertOnDriver()
+  SparkContext.assertOnDriver() // SSY haha created only on driver, so I can be sure that I am still on driver only
 
   // In order to prevent multiple SparkContexts from being active at the same time, mark this
   // context as having started construction.
@@ -149,7 +149,7 @@ class SparkContext(config: SparkConf) extends Logging {
       sparkHome: String = null,
       jars: Seq[String] = Nil,
       environment: Map[String, String] = Map()) = {
-    this(SparkContext.updatedConf(new SparkConf(), master, appName, sparkHome, jars, environment))
+    this(SparkContext.updatedConf(new SparkConf(), master, appName, sparkHome, jars, environment)) // SSY all environment merged into conf
   }
 
   // The following constructors are required when Java code accesses SparkContext directly.
@@ -269,7 +269,7 @@ class SparkContext(config: SparkConf) extends Logging {
       conf: SparkConf,
       isLocal: Boolean,
       listenerBus: LiveListenerBus): SparkEnv = {
-    SparkEnv.createDriverEnv(conf, isLocal, listenerBus, SparkContext.numDriverCores(master, conf))
+    SparkEnv.createDriverEnv(conf, isLocal, listenerBus, SparkContext.numDriverCores(master, conf)) // SSY see? still on driver
   }
 
   private[spark] def env: SparkEnv = _env
@@ -334,7 +334,7 @@ class SparkContext(config: SparkConf) extends Logging {
   def applicationAttemptId: Option[String] = _applicationAttemptId
 
   private[spark] def eventLogger: Option[EventLoggingListener] = _eventLogger
-
+	// SSY ./core/src/main/scala/org/apache/spark/ExecutorAllocationManager.scala
   private[spark] def executorAllocationManager: Option[ExecutorAllocationManager] =
     _executorAllocationManager
 
@@ -380,10 +380,10 @@ class SparkContext(config: SparkConf) extends Logging {
   }
 
   try { //SSY seems to be constructor of class SparkContext
-    _conf = config.clone()
+    _conf = config.clone() // SSY original config cloned to _conf
     _conf.validateSettings()
-
-    if (!_conf.contains("spark.master")) {
+		// SSY master URL for communication
+    if (!_conf.contains("spark.master")) { 
       throw new SparkException("A master URL must be set in your configuration")
     }
     if (!_conf.contains("spark.app.name")) {
@@ -411,7 +411,8 @@ class SparkContext(config: SparkConf) extends Logging {
 
     // Set Spark driver host and port system properties. This explicitly sets the configuration
     // instead of relying on the default value of the config constant.
-    _conf.set(DRIVER_HOST_ADDRESS, _conf.get(DRIVER_HOST_ADDRESS))
+		// SSY driver , so master is independent of driver
+    _conf.set(DRIVER_HOST_ADDRESS, _conf.get(DRIVER_HOST_ADDRESS)) // SSY why get it and then set it again?
     _conf.setIfMissing(DRIVER_PORT, 0)
 
     _conf.set(EXECUTOR_ID, SparkContext.DRIVER_IDENTIFIER)
@@ -447,7 +448,7 @@ class SparkContext(config: SparkConf) extends Logging {
     listenerBus.addToStatusQueue(_statusStore.listener.get)
 
     // Create the Spark execution environment (cache, map output tracker, etc)
-		// SSY including all sorts of managers
+		// SSY including all sorts of managers, but this is only on driver, what about executor?
     _env = createSparkEnv(_conf, isLocal, listenerBus)
     SparkEnv.set(_env)
 
@@ -535,9 +536,9 @@ class SparkContext(config: SparkConf) extends Logging {
 
     // Create and start the scheduler
     val (sched, ts) = SparkContext.createTaskScheduler(this, master, deployMode)
-    _schedulerBackend = sched
+    _schedulerBackend = sched // SSY this is backend
     _taskScheduler = ts
-    _dagScheduler = new DAGScheduler(this) // SSY function this withj only one arg in DAGScheduler definition 
+    _dagScheduler = new DAGScheduler(this) // SSY function this with only one arg in DAGScheduler definition 
     _heartbeatReceiver.ask[Boolean](TaskSchedulerIsSet)
 
     val _executorMetricsSource =
@@ -600,6 +601,7 @@ class SparkContext(config: SparkConf) extends Logging {
         schedulerBackend match {
           case b: ExecutorAllocationClient =>
             Some(new ExecutorAllocationManager(
+							// SSY not all backend extend to ExecutorAllocationClient, only StandaloneSchedulerBackend to CoarseGrainedSchedulerBackend to ExecutorAllocationClient
               schedulerBackend.asInstanceOf[ExecutorAllocationClient], listenerBus, _conf,
               cleaner = cleaner, resourceProfileManager = resourceProfileManager))
           case _ =>
@@ -608,7 +610,9 @@ class SparkContext(config: SparkConf) extends Logging {
       } else {
         None
       }
-    _executorAllocationManager.foreach(_.start())
+		// SSY ExecutorAllocationManager
+    _executorAllocationManager.foreach(_.start()) // SSY seems to allocating executors 
+		// SSY using foreach because we are using Option
 
     setupAndStartListenerBus()
     postEnvironmentUpdate()
@@ -2585,7 +2589,7 @@ object SparkContext extends Logging {
    * Throws an exception if a SparkContext is about to be created in executors.
    */
   private def assertOnDriver(): Unit = {
-    if (TaskContext.get != null) {
+    if (TaskContext.get != null) { // SSY core/src/main/scala/org/apache/spark/TaskContext.scala
       // we're accessing it during task execution, fail.
       throw new IllegalStateException(
         "SparkContext should only be created and accessed on the driver.")
@@ -2848,6 +2852,7 @@ object SparkContext extends Logging {
       case SPARK_REGEX(sparkUrl) =>
         val scheduler = new TaskSchedulerImpl(sc)
         val masterUrls = sparkUrl.split(",").map("spark://" + _)
+				// SSY StandaloneSchedulerBackend extend with both  CoarseGrainedSchedulerBackend which again extend ExecutorAllocationClient and SchedulerBackend
         val backend = new StandaloneSchedulerBackend(scheduler, sc, masterUrls)
         scheduler.initialize(backend)
         (backend, scheduler)

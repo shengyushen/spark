@@ -44,7 +44,7 @@ class Main {
    * This class works in tandem with the "bin/spark-class" script on Unix-like systems, and
    * "bin/spark-class2.cmd" batch script on Windows to execute the final command.
    * <p>
-   * On Unix-like systems, the output is a list of command arguments, separated by the NULL
+   * On Unix-like systems, the output is a list of command arguments , separated by the NULL
    * character. On Windows, the output is a command line suitable for direct execution from the
    * script.
    */
@@ -52,16 +52,18 @@ class Main {
     checkArgument(argsArray.length > 0, "Not enough arguments: missing class name.");
 
     List<String> args = new ArrayList<>(Arrays.asList(argsArray));
+		// SSY in the form java org.apache.spark.launcher.Main org.apache.spark.deploy.SparkSubmit --properties-file ${SPARK_PROP_CONF} --class ScalaWordCount --master yarn <yarn options>
+		// SSY so className is org.apache.spark.deploy.SparkSubmit
     String className = args.remove(0);
 
     boolean printLaunchCommand = !isEmpty(System.getenv("SPARK_PRINT_LAUNCH_COMMAND"));
     Map<String, String> env = new HashMap<>();
     List<String> cmd;
-    // SSY SparkSubmit is used to submit a command
+    // SSY so className is org.apache.spark.deploy.SparkSubmit
     if (className.equals("org.apache.spark.deploy.SparkSubmit")) {
       try {
-        // SSY use submit to build 
-        AbstractCommandBuilder builder = new SparkSubmitCommandBuilder(args);
+        // SSY launcher/src/main/java/org/apache/spark/launcher/SparkSubmitCommandBuilder.java
+        AbstractCommandBuilder builder = new SparkSubmitCommandBuilder(args); // SSY args is  --properties-file ${SPARK_PROP_CONF} --class ScalaWordCount --master yarn <yarn options>
         cmd = buildCommand(builder, env, printLaunchCommand);
       } catch (IllegalArgumentException e) {
         printLaunchCommand = false;
@@ -117,6 +119,8 @@ class Main {
     // in SparkSubmitCommandBuilder or SparkClassCommandBuilder
     // SSY SparkSubmitCommandBuilder do python and R submit 
     // while SparkClassCommandBuilder handle mesos , history server and so on
+		// SSY launcher/src/main/java/org/apache/spark/launcher/SparkSubmitCommandBuilder.java used for python and R submitter
+		// launcher/src/main/java/org/apache/spark/launcher/SparkClassCommandBuilder.java used for common spark program
     List<String> cmd = builder.buildCommand(env);
     if (printLaunchCommand) {
       System.err.println("Spark Command: " + join(" ", cmd));

@@ -37,6 +37,7 @@ fi
 
 # NOTE: This exact class name is matched downstream by SparkSubmit.
 # Any changes need to be reflected there.
+# SSY start ./core/src/main/scala/org/apache/spark/deploy/worker/Worker.scala
 CLASS="org.apache.spark.deploy.worker.Worker"
 
 if [[ $# -lt 1 ]] || [[ "$@" = *--help ]] || [[ "$@" = *-h ]]; then

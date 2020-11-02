@@ -24,4 +24,6 @@ fi
 # disable randomized hash for string in Python 3.3+
 export PYTHONHASHSEED=0
 # SSY ./core/src/main/scala/org/apache/spark/deploy/SparkSubmit.scala
+# SSY bin/spark-class
+# in the form spark-class org.apache.spark.deploy.SparkSubmit --properties-file ${SPARK_PROP_CONF} --class ScalaWordCount --master yarn <yarn options>
 exec "${SPARK_HOME}"/bin/spark-class org.apache.spark.deploy.SparkSubmit "$@"

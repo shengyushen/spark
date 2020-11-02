@@ -154,7 +154,7 @@ private[spark] class SortShuffleManager(conf: SparkConf) extends ShuffleManager 
     val env = SparkEnv.get
     handle match {
       case unsafeShuffleHandle: SerializedShuffleHandle[K @unchecked, V @unchecked] =>
-        new UnsafeShuffleWriter(
+        new UnsafeShuffleWriter( // SSY passing in taskMemoryManager
           env.blockManager,
           context.taskMemoryManager(),
           unsafeShuffleHandle,

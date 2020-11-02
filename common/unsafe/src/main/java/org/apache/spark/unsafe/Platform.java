@@ -207,7 +207,7 @@ public final class Platform {
       // Otherwise, use internal JDK APIs to allocate a DirectByteBuffer while ignoring the JVM's
       // MaxDirectMemorySize limit (the default limit is too low and we do not want to
       // require users to increase it).
-      long memory = allocateMemory(size);
+      long memory = allocateMemory(size); // SSY this is using sun.misc.unsafe
       ByteBuffer buffer = (ByteBuffer) DBB_CONSTRUCTOR.newInstance(memory, size);
       try {
         DBB_CLEANER_FIELD.set(buffer,

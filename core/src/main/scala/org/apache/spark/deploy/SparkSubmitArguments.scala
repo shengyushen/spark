@@ -28,7 +28,7 @@ import scala.io.Source
 import scala.util.Try
 
 import org.apache.spark.{SparkConf, SparkException, SparkUserAppException}
-import org.apache.spark.deploy.SparkSubmitAction._
+import org.apache.spark.deploy.SparkSubmitAction._ // SSY already import SparkSubmitAction with SUBMIT
 import org.apache.spark.internal.{config, Logging}
 import org.apache.spark.internal.config.DYN_ALLOCATION_ENABLED
 import org.apache.spark.launcher.SparkSubmitArgumentsParser
@@ -40,7 +40,7 @@ import org.apache.spark.util.Utils
  * The env argument is used for testing.
  */
 private[deploy] class SparkSubmitArguments(args: Seq[String], env: Map[String, String] = sys.env)
-  extends SparkSubmitArgumentsParser with Logging {
+  extends SparkSubmitArgumentsParser with Logging { // SSY core/src/main/scala/org/apache/spark/launcher/SparkSubmitArgumentsParser.scala
   var master: String = null
   var deployMode: String = null
   var executorMemory: String = null
@@ -105,18 +105,18 @@ private[deploy] class SparkSubmitArguments(args: Seq[String], env: Map[String, S
   }
 
   // Set parameters from command line arguments
-  parse(args.asJava)
+  parse(args.asJava) // SSY defined in base class launcher/src/main/java/org/apache/spark/launcher/SparkSubmitOptionParser.java and call handle define here to get action
 
   // Populate `sparkProperties` map from properties file
   mergeDefaultSparkProperties()
   // Remove keys that don't start with "spark." from `sparkProperties`.
   ignoreNonSparkProperties()
   // Use `sparkProperties` map along with env vars to fill in any missing parameters
-  loadEnvironmentArguments()
+  loadEnvironmentArguments() // SSY action get default value SUBMIT
 
   useRest = sparkProperties.getOrElse("spark.master.rest.enabled", "false").toBoolean
 
-  validateArguments()
+  validateArguments() // SSY alreay using action, but who will change it?
 
   /**
    * Merge values from the default properties file with those specified through --conf.
@@ -375,7 +375,7 @@ private[deploy] class SparkSubmitArguments(args: Seq[String], env: Map[String, S
       case PROPERTIES_FILE =>
         propertiesFile = value
 
-      case KILL_SUBMISSION =>
+      case KILL_SUBMISSION => // fill in action according to user option, or else use SUBMIT as default
         submissionToKill = value
         if (action != null) {
           error(s"Action cannot be both $action and $KILL.")

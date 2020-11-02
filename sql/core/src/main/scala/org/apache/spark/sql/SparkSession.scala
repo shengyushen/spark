@@ -156,7 +156,7 @@ class SparkSession private(
         val state = SparkSession.instantiateSessionState(
           SparkSession.sessionStateClassName(sparkContext.conf),
           self)
-        initialSessionOptions.foreach { case (k, v) => state.conf.setConfString(k, v) }
+        initialSessionOptions.foreach { case (k, v) => state.conf.setConfString(k, v) } //SSY inserting new options
         state
       }
   }
@@ -654,7 +654,7 @@ class SparkSession private(
    *
    * @since 2.0.0
    */
-  def readStream: DataStreamReader = new DataStreamReader(self)
+  def readStream: DataStreamReader = new DataStreamReader(self) // SSY sql/core/src/main/scala/org/apache/spark/sql/streaming/DataStreamReader.scala
 
   /**
    * Executes some code block and prints to stdout the time taken to execute the block. This is
@@ -793,7 +793,7 @@ object SparkSession extends Logging {
      *
      * @since 2.0.0
      */
-    def appName(name: String): Builder = config("spark.app.name", name)
+    def appName(name: String): Builder = config("spark.app.name", name) // SSY config defined above
 
     /**
      * Sets a config option. Options set using this method are automatically propagated to
@@ -967,7 +967,7 @@ object SparkSession extends Logging {
    *
    * @since 2.0.0
    */
-  def builder(): Builder = new Builder
+  def builder(): Builder = new Builder // SSY Builder defined below
 
   /**
    * Changes the SparkSession that will be returned in this thread and its children when

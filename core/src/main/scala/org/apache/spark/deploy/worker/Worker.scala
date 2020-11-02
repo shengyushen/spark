@@ -843,8 +843,8 @@ private[deploy] object Worker extends Logging {
   val SYSTEM_NAME = "sparkWorker"
   val ENDPOINT_NAME = "Worker"
   private val SSL_NODE_LOCAL_CONFIG_PATTERN = """\-Dspark\.ssl\.useNodeLocalConf\=(.+)""".r
-
-  def main(argStrings: Array[String]): Unit = {
+	// SSY entry point creating worker
+  def main(argStrings: Array[String]): Unit = { 
     Thread.setDefaultUncaughtExceptionHandler(new SparkUncaughtExceptionHandler(
       exitOnUncaughtException = false))
     Utils.initDaemon(log)
@@ -884,7 +884,7 @@ private[deploy] object Worker extends Logging {
     val securityMgr = new SecurityManager(conf)
     val rpcEnv = RpcEnv.create(systemName, host, port, conf, securityMgr)
     val masterAddresses = masterUrls.map(RpcAddress.fromSparkURL)
-    rpcEnv.setupEndpoint(ENDPOINT_NAME, new Worker(rpcEnv, webUiPort, cores, memory,
+    rpcEnv.setupEndpoint(ENDPOINT_NAME, new Worker(rpcEnv, webUiPort, cores, memory, // SSY start Worker above master at ./core/src/main/scala/org/apache/spark/deploy/master/Master.scala
       masterAddresses, ENDPOINT_NAME, workDir, conf, securityMgr, resourceFileOpt))
     rpcEnv
   }

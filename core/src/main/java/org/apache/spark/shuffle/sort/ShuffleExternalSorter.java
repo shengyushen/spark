@@ -383,7 +383,7 @@ final class ShuffleExternalSorter extends MemoryConsumer {
     if (currentPage == null ||
       pageCursor + required > currentPage.getBaseOffset() + currentPage.size() ) {
       // TODO: try to find space in previous pages
-      currentPage = allocatePage(required);
+      currentPage = allocatePage(required); // SSY calling MemoryConsumer's allocatePage which will use off heap
       pageCursor = currentPage.getBaseOffset();
       allocatedPages.add(currentPage);
     }
@@ -407,7 +407,7 @@ final class ShuffleExternalSorter extends MemoryConsumer {
     final int uaoSize = UnsafeAlignedOffset.getUaoSize();
     // Need 4 or 8 bytes to store the record length.
     final int required = length + uaoSize;
-    acquireNewPageIfNecessary(required);
+    acquireNewPageIfNecessary(required); // SSY acqure the page but not use the return value
 
     assert(currentPage != null);
     final Object base = currentPage.getBaseObject();

@@ -291,7 +291,7 @@ final class DataStreamWriter[T] private[sql](ds: Dataset[T]) {
     }
 
     if (source == "memory") {
-      assertNotPartitioned("memory")
+      assertNotPartitioned("memory") // SSY why not partitioned?
       if (extraOptions.get("queryName").isEmpty) {
         throw new AnalysisException("queryName must be specified for memory sink")
       }
@@ -314,7 +314,7 @@ final class DataStreamWriter[T] private[sql](ds: Dataset[T]) {
     } else if (source == "foreach") {
       assertNotPartitioned("foreach")
       val sink = ForeachWriterTable[T](foreachWriter, ds.exprEnc)
-      df.sparkSession.sessionState.streamingQueryManager.startQuery(
+      df.sparkSession.sessionState.streamingQueryManager.startQuery( //SSY 
         extraOptions.get("queryName"),
         extraOptions.get("checkpointLocation"),
         df,
@@ -329,7 +329,7 @@ final class DataStreamWriter[T] private[sql](ds: Dataset[T]) {
         throw new AnalysisException("'foreachBatch' is not supported with continuous trigger")
       }
       val sink = new ForeachBatchSink[T](foreachBatchWriter, ds.exprEnc)
-      df.sparkSession.sessionState.streamingQueryManager.startQuery(
+      df.sparkSession.sessionState.streamingQueryManager.startQuery( // SSY
         extraOptions.get("queryName"),
         extraOptions.get("checkpointLocation"),
         df,

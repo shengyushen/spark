@@ -70,7 +70,12 @@ fi
 # command array and checks the value to see if the launcher succeeded.
 # SSYSSYSSY build command with java as caller ./launcher/src/main/java/org/apache/spark/launcher/Main.java
 build_command() {
-  # SSY calling launcher/src/main/java/org/apache/spark/launcher/Main.java
+	# RUNNER is just java
+  # SSY calling launcher/src/main/java/org/apache/spark/launcher/Main.java building commands for launching master worker and backends and call SparkSubmit below
+	# SSY with ./core/src/main/scala/org/apache/spark/deploy/SparkSubmit.scala
+	# finally is the 
+	# SSY ../HiBench/sparkbench/micro/src/main/scala/com/intel/sparkbench/micro/ScalaWordCount.scala
+	# in the form java org.apache.spark.launcher.Main org.apache.spark.deploy.SparkSubmit --properties-file ${SPARK_PROP_CONF} --class ScalaWordCount --master yarn <yarn options>
   "$RUNNER" -Xmx128m $SPARK_LAUNCHER_OPTS -cp "$LAUNCH_CLASSPATH" org.apache.spark.launcher.Main "$@"
   printf "%d\0" $?
 }

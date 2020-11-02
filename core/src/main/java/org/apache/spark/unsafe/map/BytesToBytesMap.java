@@ -756,9 +756,9 @@ public final class BytesToBytesMap extends MemoryConsumer {
    * Acquire a new page from the memory manager.
    * @return whether there is enough space to allocate the new page.
    */
-  private boolean acquireNewPage(long required) {
+  private boolean acquireNewPage(long required) { // SSY 
     try {
-      currentPage = allocatePage(required);
+      currentPage = allocatePage(required); // SSY call base class MemoryConsumer allocatePage
     } catch (SparkOutOfMemoryError e) {
       return false;
     }

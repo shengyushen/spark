@@ -25,7 +25,7 @@ import sun.misc.Unsafe;
 // external dependencies.
 final class Platform {
 
-  private static final Unsafe _UNSAFE;
+  private static final Unsafe _UNSAFE; // SSY calling to sun.misc.Unsafe
 
   public static final int BYTE_ARRAY_OFFSET;
 
@@ -99,7 +99,7 @@ final class Platform {
     _UNSAFE.putObjectVolatile(object, offset, value);
   }
 
-  public static long allocateMemory(long size) {
+  public static long allocateMemory(long size) { // SSY calling _UNSAFE?
     return _UNSAFE.allocateMemory(size);
   }
 

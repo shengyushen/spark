@@ -34,7 +34,7 @@ class StreamingQueryWrapper(@transient private val _streamingQuery: StreamExecut
     if (_streamingQuery == null) {
       throw new IllegalStateException("StreamingQuery cannot be used in executors")
     }
-    _streamingQuery
+    _streamingQuery // SSY extracting the passing in argument
   }
 
   override def name: String = {

@@ -56,7 +56,7 @@ class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging with Seria
   import SparkConf._
 
   /** Create a SparkConf that loads defaults from system properties and the classpath */
-  def this() = this(true)
+  def this() = this(true) // SSY by default to load default setting
 
   private val settings = new ConcurrentHashMap[String, String]()
 
@@ -70,7 +70,7 @@ class SparkConf(loadDefaults: Boolean) extends Cloneable with Logging with Seria
     loadFromSystemProperties(false)
   }
 
-  private[spark] def loadFromSystemProperties(silent: Boolean): SparkConf = {
+  private[spark] def loadFromSystemProperties(silent: Boolean): SparkConf = { // SSY loading system config staring with spark.*
     // Load any spark.* system properties
     for ((key, value) <- Utils.getSystemProperties if key.startsWith("spark.")) {
       set(key, value, silent)

@@ -26,10 +26,13 @@ if [ -z "${SPARK_HOME}" ]; then
 fi
 
 # Load the Spark configuration
+# SSY ./sbin/spark-config.sh
 . "${SPARK_HOME}/sbin/spark-config.sh"
 
 # Start Master
+# SSY ./sbin/start-master.sh
 "${SPARK_HOME}/sbin"/start-master.sh
 
 # Start Workers
+# SSY sbin/start-slaves.sh
 "${SPARK_HOME}/sbin"/start-slaves.sh

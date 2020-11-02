@@ -82,7 +82,7 @@ private[spark] class MemoryStore(
     conf: SparkConf,
     blockInfoManager: BlockInfoManager,
     serializerManager: SerializerManager,
-    memoryManager: MemoryManager, // SSY MemoryStore already a child of memoryManager, I refer it here only for notifying
+    memoryManager: MemoryManager, // SSY MemoryStore already a child of memoryManager, I refer it here sometimes for acquireStorageMemory
     blockEvictionHandler: BlockEvictionHandler)
   extends Logging {
 
@@ -140,7 +140,7 @@ private[spark] class MemoryStore(
    *
    * @return true if the put() succeeded, false otherwise.
    */
-  def putBytes[T: ClassTag](
+  def putBytes[T: ClassTag]( // SSY called in ~/spark/./core/src/main/scala/org/apache/spark/storage/BlockManager.scala  to cache data newly read from disk
       blockId: BlockId,
       size: Long,
       memoryMode: MemoryMode,
@@ -151,9 +151,9 @@ private[spark] class MemoryStore(
       // We acquired enough memory for the block, so go ahead and put it
       val bytes = _bytes()
       assert(bytes.size == size)
-      val entry = new SerializedMemoryEntry[T](bytes, memoryMode, implicitly[ClassTag[T]])
+      val entry = new SerializedMemoryEntry[T](bytes, memoryMode, implicitly[ClassTag[T]]) // SSY create the entry to wrap the bytes
       entries.synchronized {
-        entries.put(blockId, entry)
+        entries.put(blockId, entry) // SSY even bytes are put into entries
       }
       logInfo("Block %s stored as bytes in memory (estimated size %s, free %s)".format(
         blockId, Utils.bytesToString(size), Utils.bytesToString(maxMemory - blocksMemoryUsed)))
@@ -386,7 +386,7 @@ private[spark] class MemoryStore(
         throw new IllegalArgumentException("should only call getValues on deserialized blocks")
       case DeserializedMemoryEntry(values, _, _) =>
         val x = Some(values)
-        x.map(_.iterator)
+        x.map(_.iterator) // SSY calling iterator of returned x
     }
   }
 
@@ -445,7 +445,7 @@ private[spark] class MemoryStore(
       var freedMemory = 0L
       val rddToAdd = blockId.flatMap(getRddId)
       val selectedBlocks = new ArrayBuffer[BlockId]
-      def blockIsEvictable(blockId: BlockId, entry: MemoryEntry[_]): Boolean = {
+      def blockIsEvictable(blockId: BlockId, entry: MemoryEntry[_]): Boolean = { // SSY evict all memory of this level
         entry.memoryMode == memoryMode && (rddToAdd.isEmpty || rddToAdd != getRddId(blockId))
       }
       // This is synchronized to ensure that the set of entries is not changed
@@ -462,8 +462,8 @@ private[spark] class MemoryStore(
             // an exclusive write lock on blocks which are candidates for eviction. We perform a
             // non-blocking "tryLock" here in order to ignore blocks which are locked for reading:
             if (blockInfoManager.lockForWriting(blockId, blocking = false).isDefined) { // SSY marking KVs not being reading
-              selectedBlocks += blockId
-              freedMemory += pair.getValue.size
+              selectedBlocks += blockId // SSY select blockId to be evicted
+              freedMemory += pair.getValue.size //SSY record its value
             }
           }
         }
@@ -475,7 +475,7 @@ private[spark] class MemoryStore(
           case SerializedMemoryEntry(buffer, _, _) => Right(buffer)
         }
         val newEffectiveStorageLevel =
-          blockEvictionHandler.dropFromMemory(blockId, () => data)(entry.classTag)
+          blockEvictionHandler.dropFromMemory(blockId, () => data)(entry.classTag) // SSY seems calling BlockManager's dropFromMemory which may move data to disk
         if (newEffectiveStorageLevel.isValid) {
           // The block is still present in at least one store, so release the lock
           // but don't delete the block info

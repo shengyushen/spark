@@ -116,7 +116,7 @@ private[memory] class ExecutionMemoryPool( // SSY spill  this is exactly the pla
       // In every iteration of this loop, we should first try to reclaim any borrowed execution
       // space from storage. This is necessary because of the potential race condition where new
       // storage blocks may steal the free execution memory that this task was waiting for.
-      maybeGrowPool(numBytes - memoryFree) // SSY external memory allocator
+      maybeGrowPool(numBytes - memoryFree) // SSY external memory allocator to shrink storage pool in UnifiedMemoryManager maybeGrowExecutionPool
 
       // Maximum size the pool would have after potentially growing the pool.
       // This is used to compute the upper bound of how much memory each task can occupy. This

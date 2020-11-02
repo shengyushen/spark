@@ -54,7 +54,7 @@ private[spark] abstract class MemoryManager(
   @GuardedBy("this")
   protected val offHeapExecutionMemoryPool = new ExecutionMemoryPool(this, MemoryMode.OFF_HEAP)
 
-  onHeapStorageMemoryPool.incrementPoolSize(onHeapStorageMemory)
+  onHeapStorageMemoryPool.incrementPoolSize(onHeapStorageMemory)  // SSY setting size of storage and execution
   onHeapExecutionMemoryPool.incrementPoolSize(onHeapExecutionMemory)
 
   protected[this] val maxOffHeapMemory = conf.get(MEMORY_OFFHEAP_SIZE)
@@ -264,7 +264,7 @@ private[spark] abstract class MemoryManager(
   private[memory] final val tungstenMemoryAllocator: MemoryAllocator = {
     tungstenMemoryMode match {
       case MemoryMode.ON_HEAP => MemoryAllocator.HEAP
-      case MemoryMode.OFF_HEAP => MemoryAllocator.UNSAFE
+      case MemoryMode.OFF_HEAP => MemoryAllocator.UNSAFE // SSY off heap is unsafe
     }
   }
 }

@@ -715,6 +715,7 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
       this.requestedTotalExecutorsPerResourceProfile ++= resourceProfileToNumExecutors
       this.numLocalityAwareTasksPerResourceProfileId = numLocalityAwareTasksPerResourceProfileId
       this.rpHostToLocalTaskCount = hostToLocalTaskCount
+			// SSY ask the back end to change the executor number
       doRequestTotalExecutors(requestedTotalExecutorsPerResourceProfile.toMap)
     }
     defaultAskTimeout.awaitResult(response)
@@ -732,6 +733,10 @@ class CoarseGrainedSchedulerBackend(scheduler: TaskSchedulerImpl, val rpcEnv: Rp
    *
    * @return a future whose evaluation indicates whether the request is acknowledged.
    */
+	// SSY useless
+	// I need core/src/main/scala/org/apache/spark/scheduler/cluster/StandaloneSchedulerBackend.scala
+	// resource-managers/mesos/src/main/scala/org/apache/spark/scheduler/cluster/mesos/MesosCoarseGrainedSchedulerBackend.scala
+	// resource-managers/yarn/src/main/scala/org/apache/spark/scheduler/cluster/YarnSchedulerBackend.scala
   protected def doRequestTotalExecutors(
       resourceProfileToTotalExecs: Map[ResourceProfile, Int]): Future[Boolean] =
     Future.successful(false)

@@ -43,4 +43,8 @@ if [ "$SPARK_MASTER_HOST" = "" ]; then
 fi
 
 # Launch the slaves
+# SSY sbin/slaves.sh
+# ssh onto each slave and 
+# 1 cd into spark home
+# 2 run sbin/start-slave.sh for that remote slave
 "${SPARK_HOME}/sbin/slaves.sh" cd "${SPARK_HOME}" \; "${SPARK_HOME}/sbin/start-slave.sh" "spark://$SPARK_MASTER_HOST:$SPARK_MASTER_PORT"

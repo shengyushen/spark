@@ -56,6 +56,7 @@ abstract class BlockTransferService extends BlockStoreClient with Logging {
   /**
    * Upload a single block to a remote node, available only after [[init]] is invoked.
    */
+	// SSY core/src/main/scala/org/apache/spark/network/netty/NettyBlockTransferService.scala
   def uploadBlock(
       hostname: String,
       port: Int,
@@ -118,6 +119,7 @@ abstract class BlockTransferService extends BlockStoreClient with Logging {
       blockData: ManagedBuffer,
       level: StorageLevel,
       classTag: ClassTag[_]): Unit = {
+		// SSY core/src/main/scala/org/apache/spark/network/netty/NettyBlockTransferService.scala
     val future = uploadBlock(hostname, port, execId, blockId, blockData, level, classTag)
     ThreadUtils.awaitResult(future, Duration.Inf)
   }

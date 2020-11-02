@@ -196,7 +196,7 @@ private[netty] class Dispatcher(nettyEnv: NettyRpcEnv, numUsableCores: Int) exte
     if (stopSharedLoop) {
       sharedLoop.stop()
     }
-    shutdownLatch.countDown()
+    shutdownLatch.countDown() // SSY init to 1 above, only on stop called we reduce it to 1 , and cause it wait for exit in awaitTermination below
   }
 
   def awaitTermination(): Unit = {

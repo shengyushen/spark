@@ -298,7 +298,7 @@ object SparkEnv extends Logging {
       instantiateClass[T](conf.get(propertyName))
     }
 
-    val serializer = instantiateClassFromConf[Serializer](SERIALIZER)
+    val serializer = instantiateClassFromConf[Serializer](SERIALIZER) // SSY SERIALIZER  a config to construct a Serializer class
     logDebug(s"Using serializer: ${serializer.getClass}")
 
     val serializerManager = new SerializerManager(serializer, conf, ioEncryptionKey)

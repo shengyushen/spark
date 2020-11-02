@@ -51,6 +51,7 @@ class SparkClassCommandBuilder extends AbstractCommandBuilder {
     // SPARK_DAEMON_JAVA_OPTS (and specific opts) + SPARK_DAEMON_MEMORY.
     // SSY master and worker handle resource management
     // driver and executor are resource user
+		// submit so many Master, Worker, HistoryServer, ExternalShuffleService, MesosClusterDispatcher 
     switch (className) {
       // SSY ./core/src/main/scala/org/apache/spark/deploy/master/Master.scala
       case "org.apache.spark.deploy.master.Master":
