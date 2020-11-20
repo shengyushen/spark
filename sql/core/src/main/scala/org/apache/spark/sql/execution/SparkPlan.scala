@@ -172,7 +172,7 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
     if (isCanonicalizedPlan) {
       throw new IllegalStateException("A canonicalized plan is not supposed to be executed.")
     }
-    doExecute()
+    doExecute() // SSY real calling execute
   }
 
   /**
@@ -282,7 +282,8 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
    *
    * Overridden by concrete implementations of SparkPlan.
    */
-  protected def doExecute(): RDD[InternalRow]
+	// SSY doExecute should be implemented in sub class of SparkPlan
+  protected def doExecute(): RDD[InternalRow] // SSY this is only extended in sql/core/src/main/scala/org/apache/spark/sql/execution/exchange/Exchange.scala class ReusedExchangeExec
 
   /**
    * Produces the result of the query as a broadcast variable.
@@ -379,11 +380,13 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
    * Runs this query returning the result as an array.
    */
   def executeCollect(): Array[InternalRow] = {
-    val byteArrayRdd = getByteArrayRdd()
+    val byteArrayRdd = getByteArrayRdd()// SSY RDD already
 
     val results = ArrayBuffer[InternalRow]()
+		// SSY this is the real run RDD
+		// runJob will be invoked in collect
     byteArrayRdd.collect().foreach { countAndBytes =>
-      decodeUnsafeRows(countAndBytes._2).foreach(results.+=)
+      decodeUnsafeRows(countAndBytes._2).foreach(results.+=) //SSY add to results
     }
     results.toArray
   }
@@ -464,6 +467,7 @@ abstract class SparkPlan extends QueryPlan[SparkPlan] with Logging with Serializ
         parts
       }
       val sc = sqlContext.sparkContext
+			// SSY run in SparkContext
       val res = sc.runJob(childRDD, (it: Iterator[(Long, Array[Byte])]) =>
         if (it.hasNext) it.next() else (0L, Array.emptyByteArray), partsToScan)
 

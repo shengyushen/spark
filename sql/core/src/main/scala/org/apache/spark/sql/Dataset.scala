@@ -86,16 +86,21 @@ private[sql] object Dataset {
   }
 	// SSY sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
   def ofRows(sparkSession: SparkSession, logicalPlan: LogicalPlan): DataFrame =
-    sparkSession.withActive {
-      val qe = sparkSession.sessionState.executePlan(logicalPlan) // SSY this will create new QueryExecution
+    sparkSession.withActive { // SSY notice that withActive will execut the folliwng code block , and then wrap the result in Dataset
+			// SSY sessionState is a val not a def
+      val qe = sparkSession.sessionState.executePlan(logicalPlan) // SSY this will create new QueryExecution without running it
       qe.assertAnalyzed()
+			// SSY wrapping qe with Dataset
       new Dataset[Row](qe, RowEncoder(qe.analyzed.schema))
   }
 
   /** A variant of ofRows that allows passing in a tracker so we can track query parsing time. */
+	//SSY logicalPlan is parsed by SparkSession.sql
   def ofRows(sparkSession: SparkSession, logicalPlan: LogicalPlan, tracker: QueryPlanningTracker)
+		// SSY sql/core/src/main/scala/org/apache/spark/sql/package.scala 
+		// DataFrame is just Dataset of Row
     : DataFrame = sparkSession.withActive {
-    val qe = new QueryExecution(sparkSession, logicalPlan, tracker)
+    val qe = new QueryExecution(sparkSession, logicalPlan, tracker) // SSY lazy eval of plan
     qe.assertAnalyzed()
     new Dataset[Row](qe, RowEncoder(qe.analyzed.schema))
   }
@@ -189,7 +194,7 @@ private[sql] object Dataset {
  */
 @Stable
 class Dataset[T] private[sql](
-    @DeveloperApi @Unstable @transient val queryExecution: QueryExecution,
+    @DeveloperApi @Unstable @transient val queryExecution: QueryExecution, // SSY this include sparkSession
     @DeveloperApi @Unstable @transient val encoder: Encoder[T])
   extends Serializable {
 
@@ -214,13 +219,13 @@ class Dataset[T] private[sql](
   // you wrap it with `withNewExecutionId` if this actions doesn't call other action.
 
   def this(sparkSession: SparkSession, logicalPlan: LogicalPlan, encoder: Encoder[T]) = {
-    this(sparkSession.sessionState.executePlan(logicalPlan), encoder)
+    this(sparkSession.sessionState.executePlan(logicalPlan), encoder) // SSY direct call the executePlan to compute the result
   }
 
   def this(sqlContext: SQLContext, logicalPlan: LogicalPlan, encoder: Encoder[T]) = {
     this(sqlContext.sparkSession, logicalPlan, encoder)
   }
-
+	// SSY calling queryExecution to generate the logicalPlan
   @transient private[sql] val logicalPlan: LogicalPlan = {
     // For various commands (like DDL) and queries with side effects, we force query execution
     // to happen right away to let these side effects take place eagerly.
@@ -297,7 +302,7 @@ class Dataset[T] private[sql](
         Column(col).cast(StringType)
       }
     }
-    val data = newDf.select(castCols: _*).take(numRows + 1)
+    val data = newDf.select(castCols: _*).take(numRows + 1) // SSY compute in select to toRdd in qe of data
 
     // For array values, replace Seq and Array with square brackets
     // For cells that are beyond `truncate` characters, replace it with the
@@ -328,14 +333,14 @@ class Dataset[T] private[sql](
    *                   all cells will be aligned right.
    * @param vertical If set to true, prints output rows vertically (one line per column value).
    */
-  private[sql] def showString(
+  private[sql] def showString( // SSY all show call this showString finally
       _numRows: Int,
       truncate: Int = 20,
       vertical: Boolean = false): String = {
     val numRows = _numRows.max(0).min(ByteArrayMethods.MAX_ROUNDED_ARRAY_LENGTH - 1)
     // Get rows represented by Seq[Seq[String]], we may get one more line if it has more data.
     val tmpRows = getRows(numRows, truncate)
-
+		// SSY formating output from here
     val hasMoreData = tmpRows.length - 1 > numRows
     val rows = tmpRows.take(numRows + 1)
 
@@ -448,6 +453,7 @@ class Dataset[T] private[sql](
    */
   // This is declared with parentheses to prevent the Scala compiler from treating
   // `ds.toDF("1")` as invoking this toDF and then apply on the returned DataFrame.
+	// SSY seems only construct a Dataset instead of real computing
   def toDF(): DataFrame = new Dataset[Row](queryExecution, RowEncoder(schema))
 
   /**
@@ -493,7 +499,7 @@ class Dataset[T] private[sql](
       "The number of columns doesn't match.\n" +
         s"Old column names (${schema.size}): " + schema.fields.map(_.name).mkString(", ") + "\n" +
         s"New column names (${colNames.size}): " + colNames.mkString(", "))
-
+		// SSY logicalPlan is defined above as val
     val newCols = logicalPlan.output.zip(colNames).map { case (oldAttribute, newName) =>
       Column(oldAttribute).as(newName)
     }
@@ -932,7 +938,7 @@ class Dataset[T] private[sql](
    * @group untypedrel
    * @since 2.0.0
    */
-  def join(right: Dataset[_]): DataFrame = withPlan {
+  def join(right: Dataset[_]): DataFrame = withPlan { // SSY only generate another logicalPlan, without actually compute it
     Join(logicalPlan, right.logicalPlan, joinType = Inner, None, JoinHint.NONE)
   }
 
@@ -1015,7 +1021,7 @@ class Dataset[T] private[sql](
       Join(logicalPlan, right.logicalPlan, joinType = JoinType(joinType), None, JoinHint.NONE))
       .analyzed.asInstanceOf[Join]
 
-    withPlan {
+    withPlan {// SSY only generate another logicalPlan, without actually compute it
       Join(
         joined.left,
         joined.right,
@@ -1074,7 +1080,7 @@ class Dataset[T] private[sql](
 
     // Trigger analysis so in the case of self-join, the analyzer will clone the plan.
     // After the cloning, left and right side will have distinct expression ids.
-    val plan = withPlan(
+    val plan = withPlan(// SSY only generate another logicalPlan, without actually compute it
       Join(logicalPlan, right.logicalPlan, JoinType(joinType), Some(joinExprs.expr), JoinHint.NONE))
       .queryExecution.analyzed.asInstanceOf[Join]
 
@@ -1121,7 +1127,7 @@ class Dataset[T] private[sql](
    * @group untypedrel
    * @since 2.1.0
    */
-  def crossJoin(right: Dataset[_]): DataFrame = withPlan {
+  def crossJoin(right: Dataset[_]): DataFrame = withPlan {// SSY only generate another logicalPlan, without actually compute it
     Join(logicalPlan, right.logicalPlan, joinType = Cross, None, JoinHint.NONE)
   }
 
@@ -1434,7 +1440,7 @@ class Dataset[T] private[sql](
    * @since 2.0.0
    */
   @scala.annotation.varargs
-  def select(cols: Column*): DataFrame = withPlan {
+  def select(cols: Column*): DataFrame = withPlan { //SSY this plan constructed here will be run by withPlan with ofRow to toRdd
     val untypedCols = cols.map {
       case typedCol: TypedColumn[_, _] =>
         // Checks if a `TypedColumn` has been inserted with
@@ -1508,7 +1514,7 @@ class Dataset[T] private[sql](
     val project = Project(c1.withInputType(exprEnc, logicalPlan.output).named :: Nil, logicalPlan)
 
     if (!encoder.isSerializedAsStructForTopLevel) {
-      new Dataset[U1](sparkSession, project, encoder)
+      new Dataset[U1](sparkSession, project, encoder) // SSY direct compute the result here
     } else {
       // Flattens inner fields of U1
       new Dataset[Tuple1[U1]](sparkSession, project, ExpressionEncoder.tuple(encoder)).map(_._1)
@@ -1524,7 +1530,7 @@ class Dataset[T] private[sql](
     val encoders = columns.map(_.encoder)
     val namedColumns =
       columns.map(_.withInputType(exprEnc, logicalPlan.output).named)
-    val execution = new QueryExecution(sparkSession, Project(namedColumns, logicalPlan))
+    val execution = new QueryExecution(sparkSession, Project(namedColumns, logicalPlan)) // SSY this QueryExecution will direct run the plan
     new Dataset(execution, ExpressionEncoder.tuple(encoders))
   }
 
@@ -1737,7 +1743,7 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   def reduce(func: (T, T) => T): T = withNewRDDExecutionId {
-    rdd.reduce(func) // SSY rdd is defined below
+    rdd.reduce(func) // SSY rdd have been computed by queryExecution
   }
 
   /**
@@ -2694,7 +2700,7 @@ class Dataset[T] private[sql](
    * @group action
    * @since 1.6.0
    */
-  def head(n: Int): Array[T] = withAction("head", limit(n).queryExecution)(collectFromPlan)
+  def head(n: Int): Array[T] = withAction("head", limit(n).queryExecution)(collectFromPlan)// SSY collectFromPlan is actually run in RDD
 
   /**
    * Returns the first row.
@@ -2914,7 +2920,7 @@ class Dataset[T] private[sql](
    * @since 3.0.0
    */
   def tail(n: Int): Array[T] = withAction(
-    "tail", withTypedPlan(Tail(Literal(n), logicalPlan)).queryExecution)(collectFromPlan)
+    "tail", withTypedPlan(Tail(Literal(n), logicalPlan)).queryExecution)(collectFromPlan)// SSY collectFromPlan is actually run in RDD
 
   /**
    * Returns the first `n` rows in the Dataset as a list.
@@ -2938,7 +2944,7 @@ class Dataset[T] private[sql](
    * @group action
    * @since 1.6.0
    */
-  def collect(): Array[T] = withAction("collect", queryExecution)(collectFromPlan)
+  def collect(): Array[T] = withAction("collect", queryExecution)(collectFromPlan) // SSY collectFromPlan is actually run in RDD
 
   /**
    * Returns a Java list that contains all rows in this Dataset.
@@ -2952,7 +2958,7 @@ class Dataset[T] private[sql](
   def collectAsList(): java.util.List[T] = withAction("collectAsList", queryExecution) { plan =>
     val values = collectFromPlan(plan)
     java.util.Arrays.asList(values : _*)
-  }
+  }// SSY collectFromPlan is actually run in RDD
 
   /**
    * Returns an iterator that contains all rows in this Dataset.
@@ -2979,7 +2985,7 @@ class Dataset[T] private[sql](
    * @since 1.6.0
    */
   def count(): Long = withAction("count", groupBy().count().queryExecution) { plan =>
-    plan.executeCollect().head.getLong(0) // SSY 
+    plan.executeCollect().head.getLong(0) // SSY run to RDD
   }
 
   /**
@@ -3197,8 +3203,10 @@ class Dataset[T] private[sql](
   def unpersist(): this.type = unpersist(blocking = false)
 
   // Represents the `QueryExecution` used to produce the content of the Dataset as an `RDD`.
+	// SSY what it the relation of this and input queryExecution
   @transient private lazy val rddQueryExecution: QueryExecution = {
     val deserialized = CatalystSerde.deserialize[T](logicalPlan)
+		// SSY it seems I am using the same executePlan, but with deserialized logicalPlan, what is the diff?
     sparkSession.sessionState.executePlan(deserialized)
   }
 
@@ -3214,7 +3222,7 @@ class Dataset[T] private[sql](
     val objectType = exprEnc.deserializer.dataType
 		//SSY rddQueryExecution is QueryExecution 
 		// toRdd will finally get SQLExecutionRDD extending RDD
-		// finally return to RDD
+		// toRdd is acutally automatically computed, and you finally call it now
     rddQueryExecution.toRdd.mapPartitions { rows =>
       rows.map(_.get(0, objectType).asInstanceOf[T])
     }
@@ -3260,7 +3268,7 @@ class Dataset[T] private[sql](
    * @since 2.0.0
    */
   @throws[AnalysisException]
-  def createTempView(viewName: String): Unit = withPlan {
+  def createTempView(viewName: String): Unit = withPlan {// SSY only generate another logicalPlan, without actually compute it
     createTempViewCommand(viewName, replace = false, global = false)
   }
 
@@ -3273,7 +3281,7 @@ class Dataset[T] private[sql](
    * @group basic
    * @since 2.0.0
    */
-  def createOrReplaceTempView(viewName: String): Unit = withPlan {
+  def createOrReplaceTempView(viewName: String): Unit = withPlan {// SSY only generate another logicalPlan, without actually compute it
     createTempViewCommand(viewName, replace = true, global = false)
   }
 
@@ -3292,7 +3300,7 @@ class Dataset[T] private[sql](
    * @since 2.1.0
    */
   @throws[AnalysisException]
-  def createGlobalTempView(viewName: String): Unit = withPlan {
+  def createGlobalTempView(viewName: String): Unit = withPlan {// SSY only generate another logicalPlan, without actually compute it
     createTempViewCommand(viewName, replace = false, global = true)
   }
 
@@ -3308,7 +3316,7 @@ class Dataset[T] private[sql](
    * @group basic
    * @since 2.2.0
    */
-  def createOrReplaceGlobalTempView(viewName: String): Unit = withPlan {
+  def createOrReplaceGlobalTempView(viewName: String): Unit = withPlan {// SSY only generate another logicalPlan, without actually compute it
     createTempViewCommand(viewName, replace = true, global = true)
   }
 
@@ -3659,16 +3667,18 @@ class Dataset[T] private[sql](
    * Wrap a Dataset action to track the QueryExecution and time cost, then report to the
    * user-registered callback functions.
    */
+	// SSY this is exactly goting to BDD
   private def withAction[U](name: String, qe: QueryExecution)(action: SparkPlan => U) = {
-    SQLExecution.withNewExecutionId(qe, Some(name)) {
+    SQLExecution.withNewExecutionId(qe, Some(name)) { // SSY wrap a name
       qe.executedPlan.resetMetrics()
-      action(qe.executedPlan)
+      action(qe.executedPlan) // SSY normally call collectFromPlan below 
     }
   }
 
   /**
    * Collect all elements from a spark plan.
    */
+	// SSY collectFromPlan invoke SparkPlan's executeCollect to RDD
   private def collectFromPlan(plan: SparkPlan): Array[T] = {
     val fromRow = resolvedEnc.createDeserializer()
     plan.executeCollect().map(fromRow)
@@ -3689,7 +3699,7 @@ class Dataset[T] private[sql](
   }
 
   /** A convenient function to wrap a logical plan and produce a DataFrame. */
-  @inline private def withPlan(logicalPlan: LogicalPlan): DataFrame = {
+  @inline private def withPlan(logicalPlan: LogicalPlan): DataFrame = { // SSY will run this plan to toRdd in qe of Dataset
     Dataset.ofRows(sparkSession, logicalPlan)
   }
 

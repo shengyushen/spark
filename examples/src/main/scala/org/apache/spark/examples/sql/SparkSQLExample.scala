@@ -37,10 +37,10 @@ object SparkSQLExample {
   def main(args: Array[String]): Unit = {
     // $example on:init_session$
     val spark = SparkSession
-      .builder()
+      .builder() // SSY SparkSession above is just the object, builder only create a Builder
       .appName("Spark SQL basic example")
       .config("spark.some.config.option", "some-value")
-      .getOrCreate()
+      .getOrCreate() // SSY this will build a SparkSession with a new SparkContext used in scheduling
 
     // For implicit conversions like converting RDDs to DataFrames
     import spark.implicits._
@@ -56,9 +56,13 @@ object SparkSQLExample {
 
   private def runBasicDataFrameExample(spark: SparkSession): Unit = {
     // $example on:create_df$
+		// SSY spark return sql/core/src/main/scala/org/apache/spark/sql/SparkSession.scala
+		// SSY read return DataStreamReader
+		// SSY json return DataFrame sql/core/src/main/scala/org/apache/spark/sql/package.scala
     val df = spark.read.json("examples/src/main/resources/people.json")
 
     // Displays the content of the DataFrame to stdout
+		// SSY refer to Dataset
     df.show()
     // +----+-------+
     // | age|   name|

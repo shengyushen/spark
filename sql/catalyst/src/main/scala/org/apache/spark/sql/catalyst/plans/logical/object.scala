@@ -31,6 +31,7 @@ import org.apache.spark.sql.types._
 object CatalystSerde {
   def deserialize[T : Encoder](child: LogicalPlan): DeserializeToObject = {
     val deserializer = UnresolvedDeserializer(encoderFor[T].deserializer)
+		// SSY still extending LogicalPlan
     DeserializeToObject(deserializer, generateObjAttr[T], child)
   }
 

@@ -57,7 +57,7 @@ class QueryExecution(
   // TODO: Move the planner an optimizer into here from SessionState.
   protected def planner = sparkSession.sessionState.planner
 
-  def assertAnalyzed(): Unit = analyzed
+  def assertAnalyzed(): Unit = analyzed // SSY it will be executed
 
   def assertSupported(): Unit = {
     if (sparkSession.sessionState.conf.isUnsupportedOperationCheckEnabled) {
@@ -65,8 +65,12 @@ class QueryExecution(
     }
   }
 
-  lazy val analyzed: LogicalPlan = executePhase(QueryPlanningTracker.ANALYSIS) {
+	//SSY analyze and optimize  all input and output logicalPlan
+	// SSY while sparkPlan and executedPlan both generate sparkPlan
+  lazy val analyzed: LogicalPlan = executePhase(QueryPlanningTracker.ANALYSIS) { // SSY notice that the phase, it is only ANALYSIS
     // We can't clone `logical` here, which will reset the `_analyzed` flag.
+		// SSY so analyzed is a val, it will be evaled when creating this class
+		// SSY only transform the logical but store it no where
     sparkSession.sessionState.analyzer.executeAndCheck(logical, tracker)
   }
 
@@ -75,13 +79,13 @@ class QueryExecution(
     assertSupported()
     // clone the plan to avoid sharing the plan instance between different stages like analyzing,
     // optimizing and planning.
-    sparkSession.sharedState.cacheManager.useCachedData(analyzed.clone())
+    sparkSession.sharedState.cacheManager.useCachedData(analyzed.clone()) // SSY clone to get another copy
   }
 
   lazy val optimizedPlan: LogicalPlan = executePhase(QueryPlanningTracker.OPTIMIZATION) {
     // clone the plan to avoid sharing the plan instance between different stages like analyzing,
     // optimizing and planning.
-    sparkSession.sessionState.optimizer.executeAndTrack(withCachedData.clone(), tracker)
+    sparkSession.sessionState.optimizer.executeAndTrack(withCachedData.clone(), tracker) // SSY clone to get even another copy
   }
 
   private def assertOptimized(): Unit = optimizedPlan
@@ -89,7 +93,7 @@ class QueryExecution(
   lazy val sparkPlan: SparkPlan = {
     // We need to materialize the optimizedPlan here because sparkPlan is also tracked under
     // the planning phase
-    assertOptimized()
+    assertOptimized() // SSY parse -> analysis -> optimize -> plan
     executePhase(QueryPlanningTracker.PLANNING) {
       // Clone the logical plan here, in case the planner rules change the states of the logical
       // plan.
@@ -102,7 +106,7 @@ class QueryExecution(
   lazy val executedPlan: SparkPlan = {
     // We need to materialize the optimizedPlan here, before tracking the planning phase, to ensure
     // that the optimization time is not counted as part of the planning phase.
-    assertOptimized()
+    assertOptimized() // SSY depend on optimization
     executePhase(QueryPlanningTracker.PLANNING) {
       // clone the plan to avoid sharing the plan instance between different stages like analyzing,
       // optimizing and planning.
@@ -120,19 +124,23 @@ class QueryExecution(
    * Given QueryExecution is not a public class, end users are discouraged to use this: please
    * use `Dataset.rdd` instead where conversion will be applied.
    */
-  lazy val toRdd: RDD[InternalRow] = new SQLExecutionRDD(
+	// SSY this is the final stage to chain from parse -> analysis -> optimization -> plan 
+  lazy val toRdd: RDD[InternalRow] = new SQLExecutionRDD( //SSY finally come to SQLExecutionRDD extending RDD
+		// SSY executedPlan depend on plan stage , and its execute 
     executedPlan.execute(), sparkSession.sessionState.conf)
 
   /** Get the metrics observed during the execution of the query plan. */
   def observedMetrics: Map[String, Row] = CollectMetricsExec.collect(executedPlan)
 
+	// SSY class's preparations
   protected def preparations: Seq[Rule[SparkPlan]] = {
+		// SSY calling object's preparations
     QueryExecution.preparations(sparkSession,
       Option(InsertAdaptiveSparkPlan(AdaptiveExecutionContext(sparkSession, this))))
   }
 
   protected def executePhase[T](phase: String)(block: => T): T = sparkSession.withActive {
-    tracker.measurePhase(phase)(block)
+    tracker.measurePhase(phase)(block) //SSY this block is the code to run
   }
 
   def simpleString: String = {

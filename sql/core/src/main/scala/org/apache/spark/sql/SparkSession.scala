@@ -77,7 +77,7 @@ import org.apache.spark.util.{CallSite, Utils}
  */
 @Stable
 class SparkSession private(
-    @transient val sparkContext: SparkContext,
+    @transient val sparkContext: SparkContext, // SSY passing in SparkContext used in managing scheduling
     @transient private val existingSharedState: Option[SharedState],
     @transient private val parentSessionState: Option[SessionState],
     @transient private[sql] val extensions: SparkSessionExtensions)
@@ -150,14 +150,14 @@ class SparkSession private(
   @Unstable
   @transient
   lazy val sessionState: SessionState = {
-    parentSessionState
+    parentSessionState // SSY where does this come from, no one create this
       .map(_.clone(this))
       .getOrElse {
-        val state = SparkSession.instantiateSessionState(
+        val state = SparkSession.instantiateSessionState( //SSY create new SessionState with passing in createQueryExecution
           SparkSession.sessionStateClassName(sparkContext.conf),
           self)
         initialSessionOptions.foreach { case (k, v) => state.conf.setConfString(k, v) } //SSY inserting new options
-        state
+        state // SSY create his own again
       }
   }
 
@@ -243,7 +243,7 @@ class SparkSession private(
    * @since 2.0.0
    */
   def newSession(): SparkSession = {
-    new SparkSession(sparkContext, Some(sharedState), parentSessionState = None, extensions)
+    new SparkSession(sparkContext, Some(sharedState), parentSessionState = None, extensions) // SSY parentSessionState is still null
   }
 
   /**
@@ -601,9 +601,9 @@ class SparkSession private(
   def sql(sqlText: String): DataFrame = withActive {
     val tracker = new QueryPlanningTracker
     val plan = tracker.measurePhase(QueryPlanningTracker.PARSING) {
-      sessionState.sqlParser.parsePlan(sqlText)
+      sessionState.sqlParser.parsePlan(sqlText) // SSY sqlText -> logicalPlan
     }
-    Dataset.ofRows(self, plan, tracker)
+    Dataset.ofRows(self, plan, tracker) //SSY run it here
   }
 
   /**
@@ -643,6 +643,7 @@ class SparkSession private(
    *
    * @since 2.0.0
    */
+	// SSY sql/core/src/main/scala/org/apache/spark/sql/DataFrameReader.scala
   def read: DataFrameReader = new DataFrameReader(self)
 
   /**
@@ -918,7 +919,7 @@ object SparkSession extends Logging {
         }
 
         // No active nor global default session. Create a new one.
-        val sparkContext = userSuppliedContext.getOrElse {
+        val sparkContext = userSuppliedContext.getOrElse { // SSY this can be set by sparkContext above
           val sparkConf = new SparkConf()
           options.foreach { case (k, v) => sparkConf.set(k, v) }
 
@@ -927,7 +928,7 @@ object SparkSession extends Logging {
             sparkConf.setAppName(java.util.UUID.randomUUID().toString)
           }
 
-          SparkContext.getOrCreate(sparkConf)
+          SparkContext.getOrCreate(sparkConf) // SSY or else I create one for myself
           // Do not update `SparkConf` for existing `SparkContext`, as it's shared by all sessions.
         }
 
@@ -935,7 +936,7 @@ object SparkSession extends Logging {
           sparkContext.getConf.get(StaticSQLConf.SPARK_SESSION_EXTENSIONS).getOrElse(Seq.empty),
           extensions)
 
-        session = new SparkSession(sparkContext, None, None, extensions)
+        session = new SparkSession(sparkContext, None, None, extensions) // SSY no parentSessionState
         options.foreach { case (k, v) => session.initialSessionOptions.put(k, v) }
         setDefaultSession(session)
         setActiveSession(session)
@@ -1103,9 +1104,9 @@ object SparkSession extends Logging {
       sparkSession: SparkSession): SessionState = {
     try {
       // invoke `new [Hive]SessionStateBuilder(SparkSession, Option[SessionState])`
-      val clazz = Utils.classForName(className)
-      val ctor = clazz.getConstructors.head
-      ctor.newInstance(sparkSession, None).asInstanceOf[BaseSessionStateBuilder].build()
+      val clazz = Utils.classForName(className) // SSY get the class name
+      val ctor = clazz.getConstructors.head// SSY and then construct it based on name
+      ctor.newInstance(sparkSession, None).asInstanceOf[BaseSessionStateBuilder].build() // SSY build SessionState here
     } catch {
       case NonFatal(e) =>
         throw new IllegalArgumentException(s"Error while instantiating '$className':", e)

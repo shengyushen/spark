@@ -135,7 +135,7 @@ abstract class RuleExecutor[TreeType <: TreeNode[_]] extends Logging {
       throw new TreeNodeException(plan, message, null)
     }
 
-    batches.foreach { batch =>
+    batches.foreach { batch => // SSY batches is defined in Analyzer
       val batchStartPlan = curPlan
       var iteration = 1
       var lastPlan = curPlan

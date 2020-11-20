@@ -71,7 +71,7 @@ private[sql] class SessionState(
     val streamingQueryManagerBuilder: () => StreamingQueryManager,
     val listenerManager: ExecutionListenerManager,
     resourceLoaderBuilder: () => SessionResourceLoader,
-    createQueryExecution: LogicalPlan => QueryExecution,
+    createQueryExecution: LogicalPlan => QueryExecution, // SSY where does createQueryExecution come from?
     createClone: (SparkSession, SessionState) => SessionState,
     val columnarRules: Seq[ColumnarRule]) {
 
@@ -113,7 +113,8 @@ private[sql] class SessionState(
   //  Helper methods, partially leftover from pre-2.0 days
   // ------------------------------------------------------
 
-  def executePlan(plan: LogicalPlan): QueryExecution = createQueryExecution(plan) // SSY createQueryExecution is passed in class creation above
+  def executePlan(plan: LogicalPlan): QueryExecution = createQueryExecution(plan) // SSY createQueryExecution is passed in class creation above, actually defined in sql/core/src/main/scala/org/apache/spark/sql/internal/BaseSessionStateBuilder.scala
+// SSY this will create the plan without triggering it
 
   def refreshTable(tableName: String): Unit = {
     catalog.refreshTable(sqlParser.parseTableIdentifier(tableName))

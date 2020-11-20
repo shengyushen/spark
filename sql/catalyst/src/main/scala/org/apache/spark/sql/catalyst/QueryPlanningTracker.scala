@@ -36,7 +36,7 @@ import org.apache.spark.util.BoundedPriorityQueue
 object QueryPlanningTracker {
 
   // Define a list of common phases here.
-  val PARSING = "parsing"
+  val PARSING = "parsing" // SSY this appear in SparkSession while other appear in QueryExecution
   val ANALYSIS = "analysis"
   val OPTIMIZATION = "optimization"
   val PLANNING = "planning"
@@ -108,7 +108,7 @@ class QueryPlanningTracker {
    */
   def measurePhase[T](phase: String)(f: => T): T = {
     val startTime = System.currentTimeMillis()
-    val ret = f
+    val ret = f //SSY this will run the input function block
     val endTime = System.currentTimeMillis
 
     if (phasesMap.containsKey(phase)) {

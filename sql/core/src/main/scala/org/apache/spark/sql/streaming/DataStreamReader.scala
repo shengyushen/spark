@@ -48,7 +48,7 @@ final class DataStreamReader private[sql](sparkSession: SparkSession) extends Lo
    * @since 2.0.0
    */
   def format(source: String): DataStreamReader = {
-    this.source = source
+    this.source = source //SSY setting sourc
     this
   }
 

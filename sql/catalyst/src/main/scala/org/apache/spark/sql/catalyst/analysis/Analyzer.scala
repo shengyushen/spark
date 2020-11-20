@@ -151,7 +151,7 @@ class Analyzer(
 
   def executeAndCheck(plan: LogicalPlan, tracker: QueryPlanningTracker): LogicalPlan = {
     AnalysisHelper.markInAnalyzer {
-      val analyzed = executeAndTrack(plan, tracker)
+      val analyzed = executeAndTrack(plan, tracker) // SSY real execution in base class RuleExecutor
       try {
         checkAnalysis(analyzed)
         analyzed
@@ -199,10 +199,11 @@ class Analyzer(
    */
   val postHocResolutionRules: Seq[Rule[LogicalPlan]] = Nil
 
-  lazy val batches: Seq[Batch] = Seq(
-    Batch("Disable Hints", Once,
+  lazy val batches: Seq[Batch] = Seq( // SSY transforming rules for logicalPlan transformation
+		// SSY Batch is defined in RuleExecutor
+    Batch("Disable Hints", Once, // SSY Once means run one time
       new ResolveHints.DisableHints(conf)),
-    Batch("Hints", fixedPoint,
+    Batch("Hints", fixedPoint,// SSY fixedPoint run multiple times?
       new ResolveHints.ResolveJoinStrategyHints(conf),
       new ResolveHints.ResolveCoalesceHints(conf)),
     Batch("Simple Sanity Check", Once,

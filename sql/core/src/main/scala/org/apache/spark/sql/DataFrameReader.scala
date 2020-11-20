@@ -226,7 +226,7 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
       throw new AnalysisException("Hive data source can only be used with tables, you can not " +
         "read files of Hive data source directly.")
     }
-
+		//SSY map is used on Option return from lookupDataSourceV2
     DataSource.lookupDataSourceV2(source, sparkSession.sessionState.conf).map { provider =>
       val catalogManager = sparkSession.sessionState.catalogManager
       val sessionOptions = DataSourceV2Utils.extractSessionConfigs(
@@ -456,7 +456,7 @@ class DataFrameReader private[sql](sparkSession: SparkSession) extends Logging {
    * @since 2.0.0
    */
   @scala.annotation.varargs
-  def json(paths: String*): DataFrame = format("json").load(paths : _*)
+  def json(paths: String*): DataFrame = format("json").load(paths : _*) // SSY format just set json as source
 
   /**
    * Loads a `JavaRDD[String]` storing JSON objects (<a href="http://jsonlines.org/">JSON

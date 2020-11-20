@@ -43,7 +43,8 @@ package object sql {
   @Unstable
   type Strategy = SparkStrategy
 
-  type DataFrame = Dataset[Row]
+  type DataFrame = Dataset[Row] 
+	// SSY Row is sql/catalyst/src/main/scala/org/apache/spark/sql/Row.scala
 
   /**
    * Metadata key which is used to write Spark version in the followings:

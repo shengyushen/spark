@@ -38,7 +38,7 @@ class SQLExecutionRDD(
     sqlConfigs.foreach { case (k, v) => newConf.setConfString(k, v) }
     newConf
   }
-
+	// SSY haha get to RDD and partitioner
   override val partitioner = firstParent[InternalRow].partitioner
 
   override def getPartitions: Array[Partition] = firstParent[InternalRow].partitions

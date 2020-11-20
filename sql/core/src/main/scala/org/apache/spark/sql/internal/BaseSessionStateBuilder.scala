@@ -290,7 +290,7 @@ abstract class BaseSessionStateBuilder(
    * Create a query execution object.
    */
   protected def createQueryExecution: LogicalPlan => QueryExecution = { plan =>
-    new QueryExecution(session, plan)
+    new QueryExecution(session, plan) // SSY this will automatically execute the plan to toRdd
   }
 
   /**
@@ -335,7 +335,7 @@ abstract class BaseSessionStateBuilder(
       () => streamingQueryManager,
       listenerManager,
       () => resourceLoader,
-      createQueryExecution,
+      createQueryExecution, // SSY passing in createQueryExecution
       createClone,
       columnarRules)
   }
